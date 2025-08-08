@@ -1,10 +1,24 @@
 #!/usr/bin/env python3
 
-from stock_predictor import predict_direction, get_historical_data
+from stock_predictor import predict_direction, get_historical_data, get_recent_news, analyze_news_sentiment
 import traceback
 
 try:
-    print('Testing TSLA prediction...')
+    print('Testing TSLA prediction with Grok AI sentiment analysis...')
+    
+    # Test news fetch and AI sentiment
+    print('\nTesting news and AI sentiment analysis...')
+    news = get_recent_news('TSLA')
+    print(f'Found {len(news)} news articles')
+    if news:
+        print('Sample headlines:')
+        for i, headline in enumerate(news[:3]):
+            print(f'  {i+1}. {headline}')
+        
+        sentiment = analyze_news_sentiment(news)
+        print(f'Grok AI sentiment score: {sentiment}')
+    
+    print('\nTesting full prediction...')
     result = predict_direction('TSLA')
     print('TSLA prediction result:', result)
     

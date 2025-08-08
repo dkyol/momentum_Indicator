@@ -2,7 +2,7 @@ modules = ["python-3.11"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["openssl", "postgresql"]
+packages = ["glibcLocales", "openssl", "postgresql"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -44,3 +44,6 @@ args = "uv add yfinance pandas"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[agent]
+integrations = ["python_xai==1.0.0"]

@@ -24,7 +24,7 @@ Preferred communication style: Simple, everyday language.
 ## Core Prediction Logic
 - **Multi-factor Analysis**: Combines three scoring components weighted differently (pattern analysis x2, sentiment, valuation)
 - **Pattern Recognition**: Analyzes historical price data for trends, momentum streaks, and dip rebounds
-- **Sentiment Analysis**: Keyword-based news sentiment scoring using predefined positive/negative word lists
+- **AI-Powered Sentiment Analysis**: Uses Grok AI model for advanced news sentiment analysis with keyword-based fallback
 - **Valuation Metrics**: Basic financial health assessment using stock fundamentals
 
 ## Data Processing
@@ -38,6 +38,9 @@ Preferred communication style: Simple, everyday language.
 
 # External Dependencies
 
+## AI Services
+- **X.AI Grok API**: Advanced AI model for news sentiment analysis with OpenAI-compatible interface
+
 ## Financial Data APIs
 - **Yahoo Finance API**: Primary data source via `yfinance` library for historical stock prices, returns calculation, and basic company metrics
 
@@ -47,6 +50,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Python Libraries
 - **Flask**: Core web framework for application structure and routing
+- **OpenAI**: Client library for X.AI Grok API integration with secure environment variable configuration
 - **pandas**: Data manipulation and analysis for stock price calculations
 - **yfinance**: Yahoo Finance API wrapper for stock data retrieval
 - **datetime**: Built-in library for time-based data processing and date calculations
