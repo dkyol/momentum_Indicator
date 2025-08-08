@@ -1,7 +1,7 @@
 import os
 import logging
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 from stock_predictor import predict_direction, get_historical_data, analyze_patterns, get_recent_news, analyze_news_sentiment, get_high_volume_data
 
 # Configure logging
@@ -11,7 +11,40 @@ logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production")
 
+# Password for the site
+SITE_PASSWORD = "Eb10f600!"
+
+def login_required(f):
+    """Decorator to require login for protected routes"""
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('authenticated'):
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Login page for password protection"""
+    if request.method == 'POST':
+        password = request.form.get('password', '').strip()
+        if password == SITE_PASSWORD:
+            session['authenticated'] = True
+            return redirect(url_for('index'))
+        else:
+            flash('Incorrect password. Please try again.', 'error')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """Logout and clear session"""
+    session.clear()
+    return redirect(url_for('login'))
+
 @app.route('/')
+@login_required
 def index():
     """Main page with stock prediction interface"""
     try:
@@ -37,6 +70,7 @@ def index():
                              query_time="Data unavailable")
 
 @app.route('/predict', methods=['POST'])
+@login_required
 def predict_stock():
     """API endpoint to predict stock direction"""
     try:
