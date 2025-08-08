@@ -27,6 +27,74 @@
             </div>
         </div>
 
+        <!-- High Volume Stocks Table -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-12">
+                <div class="card shadow-lg">
+                    <div class="card-header d-flex align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-fire me-2"></i>
+                            Top 10 Stocks by Daily Volume
+                        </h5>
+                        <span class="badge bg-info ms-auto">Live Data</span>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if high_volume_stocks %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Symbol</th>
+                                        <th>Current Price</th>
+                                        <th>Volume</th>
+                                        <th>1-Day Return</th>
+                                        <th>1-Week Return</th>
+                                        <th>1-Month Return</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for stock in high_volume_stocks %}
+                                    <tr>
+                                        <td>
+                                            <strong class="text-primary">{{ stock.Symbol }}</strong>
+                                        </td>
+                                        <td>${{ "%.2f"|format(stock.Current_Price) }}</td>
+                                        <td>{{ "{:,}".format(stock.Volume) }}</td>
+                                        <td>
+                                            <span class="{% if stock.Day_Return > 0 %}text-success{% elif stock.Day_Return < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                                {% if stock.Day_Return > 0 %}+{% endif %}{{ "%.2f"|format(stock.Day_Return) }}%
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="{% if stock.Week_Return > 0 %}text-success{% elif stock.Week_Return < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                                {% if stock.Week_Return > 0 %}+{% endif %}{{ "%.2f"|format(stock.Week_Return) }}%
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="{% if stock.Month_Return > 0 %}text-success{% elif stock.Month_Return < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                                {% if stock.Month_Return > 0 %}+{% endif %}{{ "%.2f"|format(stock.Month_Return) }}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="card-footer text-muted text-center small">
+                            <i class="fas fa-clock me-1"></i>
+                            Data queried on {{ query_time }}
+                        </div>
+                        {% else %}
+                        <div class="card-body text-center">
+                            <i class="fas fa-exclamation-circle text-warning me-2"></i>
+                            <span class="text-muted">High volume data temporarily unavailable</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Form -->
         <div class="row justify-content-center">
             <div class="col-md-6">

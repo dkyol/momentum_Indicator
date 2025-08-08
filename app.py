@@ -1,7 +1,8 @@
 import os
 import logging
+from datetime import datetime
 from flask import Flask, render_template, request, jsonify
-from stock_predictor import predict_direction, get_historical_data, analyze_patterns, get_recent_news, analyze_news_sentiment
+from stock_predictor import predict_direction, get_historical_data, analyze_patterns, get_recent_news, analyze_news_sentiment, get_high_volume_data
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -13,7 +14,25 @@ app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-prod
 @app.route('/')
 def index():
     """Main page with stock prediction interface"""
-    return render_template('index.html')
+    try:
+        # Get high volume stocks data
+        high_volume_df = get_high_volume_data()
+        current_time = datetime.now().strftime("%B %d, %Y at %I:%M %p")
+        
+        # Convert DataFrame to list of dictionaries for template
+        high_volume_stocks = []
+        if not high_volume_df.empty:
+            high_volume_stocks = high_volume_df.to_dict('records')
+        
+        return render_template('index.html', 
+                             high_volume_stocks=high_volume_stocks,
+                             query_time=current_time)
+    except Exception as e:
+        app.logger.error(f"Error loading high volume data: {str(e)}")
+        # Still render page even if data fails to load
+        return render_template('index.html', 
+                             high_volume_stocks=[],
+                             query_time="Data unavailable")
 
 @app.route('/predict', methods=['POST'])
 def predict_stock():
