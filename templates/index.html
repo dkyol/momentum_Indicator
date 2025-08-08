@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Direction Predictor</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container py-5">
+        <!-- Header -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-8 text-center">
+                <h1 class="display-4 mb-3">
+                    <i class="fas fa-chart-line me-3"></i>
+                    Stock Direction Predictor
+                </h1>
+                <p class="lead text-muted">
+                    Predict next-day stock direction using historical patterns, news sentiment, and valuation metrics
+                </p>
+                <div class="alert alert-warning" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Disclaimer:</strong> This tool is for educational purposes only. Not financial advice. Markets are unpredictable.
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Form -->
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card shadow-lg">
+                    <div class="card-body p-4">
+                        <form id="stockForm">
+                            <div class="mb-4">
+                                <label for="ticker" class="form-label fw-bold">
+                                    <i class="fas fa-search me-2"></i>Stock Ticker Symbol
+                                </label>
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text">$</span>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="ticker" 
+                                           name="ticker" 
+                                           placeholder="e.g., NVDA, AAPL, TSLA" 
+                                           maxlength="5" 
+                                           required
+                                           autocomplete="off">
+                                </div>
+                                <div class="form-text">Enter a valid stock ticker symbol (1-5 letters)</div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg w-100" id="predictBtn">
+                                <i class="fas fa-crystal-ball me-2"></i>
+                                <span id="btnText">Predict Direction</span>
+                                <div class="spinner-border spinner-border-sm ms-2 d-none" id="btnSpinner" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="row justify-content-center mt-4" id="resultsSection" style="display: none;">
+            <div class="col-md-10">
+                <div class="card shadow-lg">
+                    <div class="card-header d-flex align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            Analysis Results
+                        </h5>
+                        <span class="badge bg-secondary ms-auto" id="timestampBadge"></span>
+                    </div>
+                    <div class="card-body">
+                        <!-- Main Prediction -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="text-center p-4 rounded" id="predictionCard">
+                                    <h2 class="mb-2" id="predictionText"></h2>
+                                    <p class="text-muted mb-0" id="confidenceText"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-center p-4">
+                                    <h4 id="tickerDisplay" class="mb-2"></h4>
+                                    <p class="h5 mb-1" id="currentPrice"></p>
+                                    <p class="mb-0" id="lastReturn"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Detailed Analysis -->
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card bg-dark">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-chart-line fa-2x mb-3 text-info"></i>
+                                        <h6 class="card-title">Pattern Analysis</h6>
+                                        <h4 class="text-info" id="patternScore"></h4>
+                                        <small class="text-muted">Based on historical trends</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-dark">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-newspaper fa-2x mb-3 text-warning"></i>
+                                        <h6 class="card-title">News Sentiment</h6>
+                                        <h4 class="text-warning" id="sentimentScore"></h4>
+                                        <small class="text-muted" id="newsCount">From recent articles</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-dark">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-calculator fa-2x mb-3 text-success"></i>
+                                        <h6 class="card-title">Valuation</h6>
+                                        <h4 class="text-success" id="valuationScore"></h4>
+                                        <small class="text-muted">Forward P/E based</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <h6>Analysis Summary</h6>
+                            <ul class="list-unstyled" id="analysisSummary">
+                                <!-- Dynamic content will be inserted here -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Section -->
+        <div class="row justify-content-center mt-4" id="errorSection" style="display: none;">
+            <div class="col-md-6">
+                <div class="alert alert-danger" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong>Error:</strong> <span id="errorMessage"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
