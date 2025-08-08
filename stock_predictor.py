@@ -24,7 +24,16 @@ def get_historical_data(ticker, days=30):
     data = yf.download(ticker, start=start, end=end, progress=False)
     if data.empty:
         raise ValueError(f"No data found for {ticker}. Check ticker symbol.")
-    data['Return'] = data['Adj Close'].pct_change() * 100
+    
+    # Handle MultiIndex columns from yfinance
+    if isinstance(data.columns, pd.MultiIndex):
+        # Flatten MultiIndex columns and get Close price
+        data.columns = [col[0] for col in data.columns]
+    
+    # Use Close price since auto_adjust=True by default now
+    close_col = 'Close' if 'Close' in data.columns else 'Adj Close'
+    data['Return'] = data[close_col].pct_change() * 100
+    data['Adj Close'] = data[close_col]  # Create Adj Close for compatibility
     return data.dropna()  # Drop first row with NaN return
 
 def analyze_patterns(returns_df):
@@ -72,13 +81,22 @@ def get_recent_news(ticker):
     Fetch recent news headlines using yfinance.
     Returns list of news titles.
     """
-    stock = yf.Ticker(ticker)
-    news = stock.news
-    if not news:
+    try:
+        stock = yf.Ticker(ticker)
+        news = stock.news
+        if not news:
+            return []
+        # Get last 10 news items' titles (or all if fewer)
+        # Handle different possible key names for title
+        titles = []
+        for item in news[:10]:
+            title = item.get('title') or item.get('Title') or item.get('headline', '')
+            if title:
+                titles.append(title)
+        return titles
+    except Exception as e:
+        # If news fetch fails, return empty list to continue with other analysis
         return []
-    # Get last 10 news items' titles (or all if fewer)
-    titles = [item['title'] for item in news[:10]]
-    return titles
 
 def analyze_news_sentiment(news_titles):
     """
@@ -99,17 +117,21 @@ def get_valuation_metrics(ticker):
     Fetch basic valuation metrics like forward P/E.
     Returns a score: positive if undervalued relative to simple threshold.
     """
-    stock = yf.Ticker(ticker)
-    info = stock.info
-    forward_pe = info.get('forwardPE', None)
-    if forward_pe is None:
+    try:
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        forward_pe = info.get('forwardPE', None)
+        if forward_pe is None or forward_pe <= 0:
+            return 0
+        # Arbitrary threshold: <20 undervalued, >50 overvalued (adjust based on sector)
+        if forward_pe < 20:
+            return 1  # Bullish
+        elif forward_pe > 50:
+            return -1  # Bearish (but growth stocks like NVDA can rally despite high PE)
         return 0
-    # Arbitrary threshold: <20 undervalued, >50 overvalued (adjust based on sector)
-    if forward_pe < 20:
-        return 1  # Bullish
-    elif forward_pe > 50:
-        return -1  # Bearish (but growth stocks like NVDA can rally despite high PE)
-    return 0
+    except Exception as e:
+        # If valuation fetch fails, return neutral score
+        return 0
 
 def predict_direction(ticker):
     """
