@@ -39,9 +39,9 @@
                     <div class="card-header d-flex align-items-center">
                         <h5 class="mb-0">
                             <i class="fas fa-fire me-2"></i>
-                            Top 10 Stocks Ranked by Daily Volume
+                            Stocks Ranked by Daily Volume
                         </h5>
-                        <span class="badge bg-info ms-auto">Live Data</span>
+                        <span class="badge bg-info ms-auto">Data Updated Daily</span>
                     </div>
                     <div class="card-body p-0">
                         {% if high_volume_stocks %}
@@ -93,6 +93,150 @@
                         <div class="card-body text-center">
                             <i class="fas fa-exclamation-circle text-warning me-2"></i>
                             <span class="text-muted">High volume data temporarily unavailable</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Momentum Analysis Table -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-12">
+                <div class="card shadow-lg">
+                    <div class="card-header d-flex align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            Momentum Analysis - Top Volume Stocks
+                        </h5>
+                        <span class="badge bg-success ms-auto">Technical Indicators</span>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if momentum_data %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Symbol</th>
+                                        <th data-bs-toggle="tooltip" title="Relative Strength Index (0-100)">RSI</th>
+                                        <th data-bs-toggle="tooltip" title="Stochastic %D (0-100)">Stoch %D</th>
+                                        <th data-bs-toggle="tooltip" title="MACD Line">MACD</th>
+                                        <th data-bs-toggle="tooltip" title="Commodity Channel Index">CCI</th>
+                                        <th data-bs-toggle="tooltip" title="Williams %R (-100 to 0)">Williams %R</th>
+                                        <th data-bs-toggle="tooltip" title="Rate of Change %">ROC %</th>
+                                        <th data-bs-toggle="tooltip" title="Probability Index (1-100): Higher = More Likely to Increase">
+                                            <i class="fas fa-star me-1"></i>Probability Index
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for data in momentum_data %}
+                                    <tr>
+                                        <td>
+                                            <strong class="text-primary">{{ data.Symbol }}</strong>
+                                        </td>
+                                        <td>
+                                            {% if data.RSI != 'N/A' and data.RSI != 'Error' %}
+                                                <span class="{% if data.RSI < 30 %}text-success{% elif data.RSI > 70 %}text-danger{% else %}text-warning{% endif %}">
+                                                    {{ data.RSI }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">{{ data.RSI }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if data.Stoch_D != 'N/A' and data.Stoch_D != 'Error' %}
+                                                <span class="{% if data.Stoch_D < 20 %}text-success{% elif data.Stoch_D > 80 %}text-danger{% else %}text-warning{% endif %}">
+                                                    {{ data.Stoch_D }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">{{ data.Stoch_D }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if data.MACD != 'N/A' and data.MACD != 'Error' %}
+                                                <span class="{% if data.MACD > 0 %}text-success{% else %}text-danger{% endif %}">
+                                                    {{ data.MACD }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">{{ data.MACD }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if data.CCI != 'N/A' and data.CCI != 'Error' %}
+                                                <span class="{% if data.CCI < -100 %}text-success{% elif data.CCI > 100 %}text-danger{% else %}text-warning{% endif %}">
+                                                    {{ data.CCI }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">{{ data.CCI }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if data.Williams_R != 'N/A' and data.Williams_R != 'Error' %}
+                                                <span class="{% if data.Williams_R < -80 %}text-success{% elif data.Williams_R > -20 %}text-danger{% else %}text-warning{% endif %}">
+                                                    {{ data.Williams_R }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">{{ data.Williams_R }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if data.ROC != 'N/A' and data.ROC != 'Error' %}
+                                                <span class="{% if data.ROC > 0 %}text-success{% else %}text-danger{% endif %}">
+                                                    {% if data.ROC > 0 %}+{% endif %}{{ data.ROC }}%
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">{{ data.ROC }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if data.Probability_Index != 'N/A' and data.Probability_Index != 'Error' %}
+                                                <div class="d-flex align-items-center">
+                                                    <div class="progress me-2" style="width: 60px; height: 20px;">
+                                                        <div class="progress-bar {% if data.Probability_Index >= 70 %}bg-success{% elif data.Probability_Index >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                             role="progressbar" 
+                                                             style="width: {{ data.Probability_Index }}%"
+                                                             aria-valuenow="{{ data.Probability_Index }}" 
+                                                             aria-valuemin="0" 
+                                                             aria-valuemax="100">
+                                                        </div>
+                                                    </div>
+                                                    <span class="{% if data.Probability_Index >= 70 %}text-success{% elif data.Probability_Index >= 50 %}text-warning{% else %}text-danger{% endif %} fw-bold">
+                                                        {{ data.Probability_Index }}
+                                                    </span>
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">{{ data.Probability_Index }}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="card-footer text-muted">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <small>
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        <strong>Legend:</strong> 
+                                        <span class="text-success">Green = Oversold/Bullish</span> • 
+                                        <span class="text-warning">Yellow = Neutral</span> • 
+                                        <span class="text-danger">Red = Overbought/Bearish</span>
+                                    </small>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <small>
+                                        <i class="fas fa-clock me-1"></i>
+                                        Based on last 2 weeks hourly data
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="card-body text-center">
+                            <i class="fas fa-chart-line text-warning me-2"></i>
+                            <span class="text-muted">Momentum analysis loading...</span>
                         </div>
                         {% endif %}
                     </div>
@@ -224,5 +368,12 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    </script>
 </body>
 </html>

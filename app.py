@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 from stock_predictor import predict_direction, get_historical_data, analyze_patterns, get_recent_news, analyze_news_sentiment, get_high_volume_data
+from momentum_analyzer import get_momentum_summary
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -59,14 +60,22 @@ def index():
         if not high_volume_df.empty:
             high_volume_stocks = high_volume_df.to_dict('records')
         
+        # Get momentum analysis for top 10 volume stocks
+        momentum_data = []
+        if high_volume_stocks:
+            top_symbols = [stock['Symbol'] for stock in high_volume_stocks[:10]]
+            momentum_data = get_momentum_summary(top_symbols)
+        
         return render_template('index.html', 
                              high_volume_stocks=high_volume_stocks,
+                             momentum_data=momentum_data,
                              query_time=current_time)
     except Exception as e:
         app.logger.error(f"Error loading high volume data: {str(e)}")
         # Still render page even if data fails to load
         return render_template('index.html', 
                              high_volume_stocks=[],
+                             momentum_data=[],
                              query_time="Data unavailable")
 
 @app.route('/predict', methods=['POST'])
