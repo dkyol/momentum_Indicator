@@ -125,6 +125,14 @@ document.addEventListener('DOMContentLoaded', function() {
             summaryList.appendChild(li);
         });
 
+        // Add sentiment summary if available
+        if (data.sentiment_summary) {
+            const sentimentLi = document.createElement('li');
+            sentimentLi.className = 'mb-2 alert alert-info p-2';
+            sentimentLi.innerHTML = `<i class="fas fa-robot text-primary me-2"></i><strong>AI Analysis:</strong> ${data.sentiment_summary}`;
+            summaryList.appendChild(sentimentLi);
+        }
+
         // Show results with animation
         resultsSection.style.display = 'block';
         resultsSection.classList.add('fade-in');

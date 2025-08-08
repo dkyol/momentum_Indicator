@@ -4,7 +4,7 @@ from stock_predictor import predict_direction, get_historical_data, get_recent_n
 import traceback
 
 try:
-    print('Testing TSLA prediction with Grok AI sentiment analysis...')
+    print('Testing TSLA prediction with enhanced Grok AI sentiment analysis...')
     
     # Test news fetch and AI sentiment
     print('\nTesting news and AI sentiment analysis...')
@@ -15,19 +15,29 @@ try:
         for i, headline in enumerate(news[:3]):
             print(f'  {i+1}. {headline}')
         
-        sentiment = analyze_news_sentiment(news)
-        print(f'Grok AI sentiment score: {sentiment}')
+        sentiment_result = analyze_news_sentiment(news)
+        print('Grok AI sentiment analysis:')
+        print(f'  Score: {sentiment_result["score"]}')
+        print(f'  Article count: {sentiment_result["article_count"]}')
+        print(f'  Summary: {sentiment_result["summary"]}')
+    else:
+        sentiment_result = analyze_news_sentiment([])
+        print('No news found, testing empty case:')
+        print(f'  Score: {sentiment_result["score"]}')
+        print(f'  Article count: {sentiment_result["article_count"]}')
+        print(f'  Summary: {sentiment_result["summary"]}')
     
     print('\nTesting full prediction...')
     result = predict_direction('TSLA')
-    print('TSLA prediction result:', result)
-    
-    print('\nTesting historical data fetch...')
-    data = get_historical_data('TSLA')
-    print('Data shape:', data.shape)
-    print('Columns:', list(data.columns))
-    print('Last return: {:.2f}%'.format(data['Return'].iloc[-1]))
-    print('Current price: ${:.2f}'.format(data['Adj Close'].iloc[-1]))
+    if isinstance(result, dict):
+        print('TSLA prediction result:')
+        print(f'  Prediction: {result["prediction"]}')
+        print(f'  Total score: {result["total_score"]}')
+        print(f'  Pattern score: {result["pattern_score"]}')
+        print(f'  Sentiment: {result["sentiment_result"]}')
+        print(f'  Valuation score: {result["valuation_score"]}')
+    else:
+        print('TSLA prediction result:', result)
     
 except Exception as e:
     print('Error:', str(e))

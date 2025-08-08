@@ -106,49 +106,70 @@ def get_recent_news(ticker):
 def analyze_news_sentiment(news_titles):
     """
     AI-powered sentiment analysis using Grok model.
-    Returns a sentiment score: positive for bullish news, negative for bearish.
+    Returns a dictionary with sentiment score and analysis summary.
     """
     if not news_titles:
-        return 0
+        return {
+            'score': 0,
+            'article_count': 0,
+            'summary': 'No recent news articles found for analysis.'
+        }
     
     try:
         # Prepare news headlines for analysis
         news_text = "\n".join([f"- {title}" for title in news_titles[:10]])
         
-        # Call Grok AI for sentiment analysis
+        # Call Grok AI for detailed sentiment analysis
         response = grok_client.chat.completions.create(
             model="grok-2-1212",
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a financial sentiment analysis expert. Analyze the sentiment of stock-related news headlines and provide a numerical score from -5 to +5, where negative scores indicate bearish sentiment and positive scores indicate bullish sentiment. Respond with only the numerical score, no explanation."
+                    "content": "You are a financial sentiment analysis expert. Analyze the sentiment of stock-related news headlines and provide: 1) A numerical score from -5 to +5 (negative=bearish, positive=bullish), 2) A brief summary sentence explaining the overall sentiment. Format your response as: 'Score: [number]\\nSummary: [one sentence explanation]'"
                 },
                 {
                     "role": "user",
-                    "content": f"Analyze the sentiment of these stock news headlines and return a score from -5 to +5:\n\n{news_text}"
+                    "content": f"Analyze the sentiment of these {len(news_titles)} stock news headlines:\n\n{news_text}"
                 }
             ],
             temperature=0,
-            max_tokens=10
+            max_tokens=150
         )
         
-        # Extract numerical score from response
-        score_text = response.choices[0].message.content.strip()
-        # Try to extract number from response
-        import re
-        numbers = re.findall(r'-?\d+(?:\.\d+)?', score_text)
-        if numbers:
-            sentiment_score = float(numbers[0])
-            # Clamp to expected range
-            sentiment_score = max(-5, min(5, sentiment_score))
-            return int(sentiment_score)
-        else:
-            return 0
+        # Parse response for score and summary
+        response_text = response.choices[0].message.content.strip()
+        lines = response_text.split('\n')
+        
+        # Extract score
+        score = 0
+        summary = "Unable to parse AI response"
+        
+        for line in lines:
+            if line.startswith('Score:'):
+                score_text = line.replace('Score:', '').strip()
+                import re
+                numbers = re.findall(r'-?\d+(?:\.\d+)?', score_text)
+                if numbers:
+                    score = float(numbers[0])
+                    score = max(-5, min(5, score))  # Clamp to range
+            elif line.startswith('Summary:'):
+                summary = line.replace('Summary:', '').strip()
+        
+        return {
+            'score': int(score),
+            'article_count': len(news_titles),
+            'summary': summary
+        }
             
     except Exception as e:
         # Fallback to simple keyword-based analysis if AI call fails
         print(f"AI sentiment analysis failed, using fallback: {e}")
-        return fallback_sentiment_analysis(news_titles)
+        fallback_score = fallback_sentiment_analysis(news_titles)
+        return {
+            'score': fallback_score,
+            'article_count': len(news_titles),
+            'summary': f'Used fallback analysis on {len(news_titles)} articles due to AI service unavailability.'
+        }
 
 def fallback_sentiment_analysis(news_titles):
     """
@@ -190,6 +211,7 @@ def get_valuation_metrics(ticker):
 def predict_direction(ticker):
     """
     Combine all analyses to predict if stock will go up or down next day.
+    Returns a dictionary with detailed analysis results.
     """
     try:
         # Get historical data and patterns
@@ -198,7 +220,8 @@ def predict_direction(ticker):
         
         # Get news and sentiment
         news_titles = get_recent_news(ticker)
-        sentiment_score = analyze_news_sentiment(news_titles)
+        sentiment_result = analyze_news_sentiment(news_titles)
+        sentiment_score = sentiment_result['score'] if isinstance(sentiment_result, dict) else sentiment_result
         
         # Get valuation score
         valuation_score = get_valuation_metrics(ticker)
@@ -208,11 +231,21 @@ def predict_direction(ticker):
         
         # Prediction logic
         if total_score > 2:
-            return "Up"
+            prediction = "Up"
         elif total_score < -2:
-            return "Down"
+            prediction = "Down"
         else:
-            return "Uncertain (neutral score)"
+            prediction = "Uncertain"
+        
+        return {
+            'prediction': prediction,
+            'pattern_score': pattern_score,
+            'sentiment_result': sentiment_result,
+            'valuation_score': valuation_score,
+            'total_score': total_score,
+            'current_price': returns_df['Adj Close'].iloc[-1],
+            'last_return': returns_df['Return'].iloc[-1]
+        }
     
     except Exception as e:
         return f"Error: {str(e)}"

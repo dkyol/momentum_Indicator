@@ -35,50 +35,41 @@ def predict_stock():
         
         # Get detailed prediction analysis
         try:
-            # Get historical data and patterns
-            returns_df = get_historical_data(ticker)
-            pattern_score = analyze_patterns(returns_df)
+            result = predict_direction(ticker)
             
-            # Get news and sentiment
-            news_titles = get_recent_news(ticker)
-            sentiment_score = analyze_news_sentiment(news_titles)
+            # Handle error case
+            if isinstance(result, str) and result.startswith("Error:"):
+                raise ValueError(result.replace("Error: ", ""))
             
-            # Get valuation score
-            valuation_score = get_valuation_metrics(ticker)
+            # Extract data from prediction result
+            prediction = result['prediction']
+            sentiment_result = result['sentiment_result']
             
-            # Total score calculation
-            total_score = (pattern_score * 2) + sentiment_score + valuation_score
-            
-            # Prediction logic
-            if total_score > 2:
-                prediction = "Up"
-                confidence = "High" if total_score > 4 else "Medium"
-            elif total_score < -2:
-                prediction = "Down"
-                confidence = "High" if total_score < -4 else "Medium"
+            # Determine confidence based on total score
+            total_score = result['total_score']
+            if total_score > 4:
+                confidence = "High"
+            elif total_score > 2 or total_score < -2:
+                confidence = "Medium"
             else:
-                prediction = "Uncertain"
                 confidence = "Low"
-            
-            # Get current price for display
-            current_price = returns_df['Adj Close'].iloc[-1]
-            last_return = returns_df['Return'].iloc[-1]
             
             return jsonify({
                 'ticker': ticker,
                 'prediction': prediction,
                 'confidence': confidence,
-                'current_price': round(current_price, 2),
-                'last_return': round(last_return, 2),
-                'pattern_score': pattern_score,
-                'sentiment_score': sentiment_score,
-                'valuation_score': valuation_score,
+                'current_price': round(result['current_price'], 2),
+                'last_return': round(result['last_return'], 2),
+                'pattern_score': result['pattern_score'],
+                'sentiment_score': sentiment_result['score'],
+                'valuation_score': result['valuation_score'],
                 'total_score': total_score,
-                'news_count': len(news_titles),
+                'news_count': sentiment_result['article_count'],
+                'sentiment_summary': sentiment_result['summary'],
                 'analysis_summary': {
-                    'pattern_analysis': f"Pattern score: {pattern_score} (based on historical trends and momentum)",
-                    'sentiment_analysis': f"News sentiment: {sentiment_score} (from {len(news_titles)} recent articles)",
-                    'valuation_analysis': f"Valuation score: {valuation_score} (based on forward P/E ratio)"
+                    'pattern_analysis': f"Pattern score: {result['pattern_score']} (based on historical trends and momentum)",
+                    'sentiment_analysis': f"AI sentiment: {sentiment_result['score']} from {sentiment_result['article_count']} articles - {sentiment_result['summary']}",
+                    'valuation_analysis': f"Valuation score: {result['valuation_score']} (based on forward P/E ratio)"
                 }
             })
             
