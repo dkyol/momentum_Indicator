@@ -4,6 +4,7 @@ from datetime import datetime
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 from stock_predictor import predict_direction, get_historical_data, analyze_patterns, get_recent_news, analyze_news_sentiment, get_high_volume_data
 from momentum_analyzer import get_momentum_summary
+from scheduler import get_cached_high_volume_stocks, get_cached_momentum_data, get_last_update_info, is_data_fresh, save_market_data
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -11,6 +12,19 @@ logging.basicConfig(level=logging.DEBUG)
 # Create Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production")
+
+# Initialize cache on startup if needed
+def initialize_cache():
+    """Initialize market data cache on startup if not fresh"""
+    if not is_data_fresh():
+        logging.info("Initializing market data cache on startup...")
+        try:
+            save_market_data()
+        except Exception as e:
+            logging.error(f"Failed to initialize cache: {e}")
+
+# Call initialization
+initialize_cache()
 
 # Password for the site
 SITE_PASSWORD = "Eb10f600!"
@@ -49,22 +63,32 @@ def logout():
 def index():
     """Main page with stock prediction interface"""
     try:
-        # Get high volume stocks data
-        high_volume_df = get_high_volume_data()
+        # Use cached data or fetch fresh data if cache is stale
         from datetime import timezone, timedelta
         est = timezone(timedelta(hours=-5))  # EST timezone
         current_time = datetime.now(est).strftime("%B %d, %Y at %I:%M %p EST")
         
-        # Convert DataFrame to list of dictionaries for template
-        high_volume_stocks = []
-        if not high_volume_df.empty:
-            high_volume_stocks = high_volume_df.to_dict('records')
-        
-        # Get momentum analysis for top 5 volume stocks (to reduce load time)
-        momentum_data = []
-        if high_volume_stocks:
-            top_symbols = [stock['Symbol'] for stock in high_volume_stocks[:5]]
-            momentum_data = get_momentum_summary(top_symbols)
+        if is_data_fresh():
+            # Use cached data
+            high_volume_stocks = get_cached_high_volume_stocks()
+            momentum_data = get_cached_momentum_data()
+            last_update = get_last_update_info()
+            if last_update.get('last_update'):
+                try:
+                    from datetime import datetime as dt
+                    import pytz
+                    est_tz = pytz.timezone('US/Eastern')
+                    update_dt = dt.fromisoformat(last_update['last_update'])
+                    current_time = f"Last updated: {update_dt.strftime('%B %d, %Y at %I:%M %p EST')} (cached)"
+                except:
+                    pass
+        else:
+            # Fetch fresh data and cache it
+            logging.info("Cache is stale, fetching fresh data...")
+            save_market_data()
+            high_volume_stocks = get_cached_high_volume_stocks()
+            momentum_data = get_cached_momentum_data()
+            current_time = f"{current_time} (fresh data)"
         
         return render_template('index.html', 
                              high_volume_stocks=high_volume_stocks,

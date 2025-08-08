@@ -32,8 +32,9 @@ Preferred communication style: Simple, everyday language.
 
 ## Data Processing
 - **Historical Data**: 30-day rolling window analysis of stock price movements and daily returns
-- **High Volume Data**: Real-time fetching of top 10 stocks by volume with 1-day, 1-week, and 1-month returns
-- **Real-time Integration**: Live data fetching for current market information
+- **High Volume Data**: Cached data system with top 10 stocks by volume including 1-day, 1-week, and 1-month returns
+- **Scheduled Updates**: Daily market data refresh at 5:00 PM EST when markets are closed using automated scheduler
+- **Cache Management**: JSON-based caching system with freshness validation and automatic fallback to live data
 - **Score Aggregation**: Weighted scoring system that combines all analytical components into a single prediction
 - **Timezone Display**: EST timezone formatting for data query timestamps
 
@@ -58,6 +59,8 @@ Preferred communication style: Simple, everyday language.
 - **OpenAI**: Client library for X.AI Grok API integration with secure environment variable configuration
 - **pandas**: Data manipulation and analysis for stock price calculations
 - **yfinance**: Yahoo Finance API wrapper for stock data retrieval
+- **schedule**: Task scheduling library for automated daily data updates at 5 PM EST
+- **pytz**: Timezone handling for EST scheduling and timestamp management
 - **datetime**: Built-in library for time-based data processing and date calculations
 
 ## Development Environment

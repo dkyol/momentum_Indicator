@@ -12,5 +12,7 @@ dependencies = [
     "openai>=1.99.4",
     "pandas>=2.3.1",
     "psycopg2-binary>=2.9.10",
+    "pytz>=2025.2",
+    "schedule>=1.2.2",
     "yfinance>=0.2.65",
 ]
