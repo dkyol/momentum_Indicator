@@ -222,4 +222,7 @@ def get_momentum_summary(tickers):
                 'Probability_Index': 'Error'
             })
     
+    # Sort by Probability_Index in descending order (highest first)
+    momentum_data.sort(key=lambda x: x['Probability_Index'] if isinstance(x['Probability_Index'], (int, float)) else 0, reverse=True)
+    
     return momentum_data
