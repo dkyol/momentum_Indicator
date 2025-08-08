@@ -17,7 +17,9 @@ def index():
     try:
         # Get high volume stocks data
         high_volume_df = get_high_volume_data()
-        current_time = datetime.now().strftime("%B %d, %Y at %I:%M %p")
+        from datetime import timezone, timedelta
+        est = timezone(timedelta(hours=-5))  # EST timezone
+        current_time = datetime.now(est).strftime("%B %d, %Y at %I:%M %p EST")
         
         # Convert DataFrame to list of dictionaries for template
         high_volume_stocks = []

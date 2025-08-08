@@ -12,6 +12,7 @@ Preferred communication style: Simple, everyday language.
 - **Technology Stack**: Pure HTML, CSS, and vanilla JavaScript with Bootstrap for responsive UI
 - **Theme**: Dark theme implementation using Bootstrap's dark mode
 - **User Interface**: Single-page application with real-time form validation and loading states
+- **High Volume Stocks Table**: Live data table displaying top 10 stocks ranked by daily volume with price and return metrics
 - **Styling Approach**: Custom CSS variables for prediction states (up/down/uncertain) with color-coded results
 
 ## Backend Architecture  
@@ -29,8 +30,10 @@ Preferred communication style: Simple, everyday language.
 
 ## Data Processing
 - **Historical Data**: 30-day rolling window analysis of stock price movements and daily returns
+- **High Volume Data**: Real-time fetching of top 10 stocks by volume with 1-day, 1-week, and 1-month returns
 - **Real-time Integration**: Live data fetching for current market information
 - **Score Aggregation**: Weighted scoring system that combines all analytical components into a single prediction
+- **Timezone Display**: EST timezone formatting for data query timestamps
 
 ## Session Management
 - **Security**: Session secret key configuration with environment variable support
