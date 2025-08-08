@@ -13,6 +13,7 @@ from datetime import datetime
 import pytz
 from stock_predictor import get_high_volume_data
 from momentum_analyzer import get_momentum_summary
+from sma_analyzer import get_sma_summary
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 # Data file paths
 HIGH_VOLUME_DATA_FILE = 'cached_high_volume_stocks.json'
 MOMENTUM_DATA_FILE = 'cached_momentum_data.json'
+SMA_DATA_FILE = 'cached_sma_data.json'
 LAST_UPDATE_FILE = 'last_data_update.json'
 
 def save_market_data():
@@ -43,10 +45,14 @@ def save_market_data():
         
         # Get momentum analysis for top 5 volume stocks
         momentum_data = []
+        sma_data = []
         if high_volume_stocks:
             top_symbols = [stock['Symbol'] for stock in high_volume_stocks[:5]]
             logger.info(f"Fetching momentum analysis for: {top_symbols}")
             momentum_data = get_momentum_summary(top_symbols)
+            
+            logger.info(f"Fetching SMA analysis for: {top_symbols}")
+            sma_data = get_sma_summary(top_symbols)
         
         # Save data to files
         with open(HIGH_VOLUME_DATA_FILE, 'w') as f:
@@ -55,11 +61,15 @@ def save_market_data():
         with open(MOMENTUM_DATA_FILE, 'w') as f:
             json.dump(momentum_data, f, default=str)
         
+        with open(SMA_DATA_FILE, 'w') as f:
+            json.dump(sma_data, f, default=str)
+        
         # Save last update timestamp
         update_info = {
             'last_update': update_time.isoformat(),
             'stocks_count': len(high_volume_stocks),
-            'momentum_count': len(momentum_data)
+            'momentum_count': len(momentum_data),
+            'sma_count': len(sma_data)
         }
         with open(LAST_UPDATE_FILE, 'w') as f:
             json.dump(update_info, f)
@@ -67,6 +77,7 @@ def save_market_data():
         logger.info(f"Market data updated successfully at {update_time}")
         logger.info(f"High volume stocks: {len(high_volume_stocks)}")
         logger.info(f"Momentum analysis: {len(momentum_data)}")
+        logger.info(f"SMA analysis: {len(sma_data)}")
         
     except Exception as e:
         logger.error(f"Error updating market data: {e}")
@@ -97,6 +108,12 @@ def get_cached_momentum_data():
     Get cached momentum analysis data.
     """
     return load_cached_data(MOMENTUM_DATA_FILE, [])
+
+def get_cached_sma_data():
+    """
+    Get cached SMA analysis data.
+    """
+    return load_cached_data(SMA_DATA_FILE, [])
 
 def get_last_update_info():
     """

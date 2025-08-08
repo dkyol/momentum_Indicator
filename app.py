@@ -4,7 +4,7 @@ from datetime import datetime
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 from stock_predictor import predict_direction, get_historical_data, analyze_patterns, get_recent_news, analyze_news_sentiment, get_high_volume_data
 from momentum_analyzer import get_momentum_summary
-from scheduler import get_cached_high_volume_stocks, get_cached_momentum_data, get_last_update_info, is_data_fresh, save_market_data
+from scheduler import get_cached_high_volume_stocks, get_cached_momentum_data, get_cached_sma_data, get_last_update_info, is_data_fresh, save_market_data
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -72,6 +72,7 @@ def index():
             # Use cached data
             high_volume_stocks = get_cached_high_volume_stocks()
             momentum_data = get_cached_momentum_data()
+            sma_data = get_cached_sma_data()
             last_update = get_last_update_info()
             if last_update.get('last_update'):
                 try:
@@ -88,11 +89,13 @@ def index():
             save_market_data()
             high_volume_stocks = get_cached_high_volume_stocks()
             momentum_data = get_cached_momentum_data()
+            sma_data = get_cached_sma_data()
             current_time = f"{current_time} (fresh data)"
         
         return render_template('index.html', 
                              high_volume_stocks=high_volume_stocks,
                              momentum_data=momentum_data,
+                             sma_data=sma_data,
                              query_time=current_time)
     except Exception as e:
         app.logger.error(f"Error loading high volume data: {str(e)}")
@@ -100,6 +103,7 @@ def index():
         return render_template('index.html', 
                              high_volume_stocks=[],
                              momentum_data=[],
+                             sma_data=[],
                              query_time="Data unavailable")
 
 @app.route('/predict', methods=['POST'])

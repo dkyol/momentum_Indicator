@@ -244,6 +244,104 @@
             </div>
         </div>
 
+        <!-- Simple Moving Averages Analysis -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-12">
+                <div class="card shadow-lg">
+                    <div class="card-header d-flex align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Simple Moving Averages Analysis
+                        </h5>
+                        <span class="badge bg-info ms-auto">SMA 50 & 200</span>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if sma_data %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Symbol</th>
+                                        <th data-bs-toggle="tooltip" title="Previous day's closing price">Previous Close</th>
+                                        <th data-bs-toggle="tooltip" title="50-day Simple Moving Average">SMA 50</th>
+                                        <th data-bs-toggle="tooltip" title="200-day Simple Moving Average">SMA 200</th>
+                                        <th data-bs-toggle="tooltip" title="Percentage above/below 50-day SMA">% vs SMA 50</th>
+                                        <th data-bs-toggle="tooltip" title="Percentage above/below 200-day SMA">% vs SMA 200</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for data in sma_data %}
+                                    <tr>
+                                        <td>
+                                            <strong class="text-primary">{{ data.Symbol }}</strong>
+                                        </td>
+                                        <td>${{ data.Previous_Close }}</td>
+                                        <td>
+                                            {% if data.SMA_50 != 'Error' and data.SMA_50 != None %}
+                                                ${{ data.SMA_50 }}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if data.SMA_200 != 'Error' and data.SMA_200 != None %}
+                                                ${{ data.SMA_200 }}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if data.Pct_Above_Below_50 != 'Error' and data.Pct_Above_Below_50 != None %}
+                                                <span class="{% if data.Pct_Above_Below_50 > 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                                    {% if data.Pct_Above_Below_50 > 0 %}+{% endif %}{{ data.Pct_Above_Below_50 }}%
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if data.Pct_Above_Below_200 != 'Error' and data.Pct_Above_Below_200 != None %}
+                                                <span class="{% if data.Pct_Above_Below_200 > 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                                    {% if data.Pct_Above_Below_200 > 0 %}+{% endif %}{{ data.Pct_Above_Below_200 }}%
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="card-footer text-muted">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <small>
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        <strong>Legend:</strong> 
+                                        <span class="text-success">Green = Above SMA (Bullish)</span> • 
+                                        <span class="text-danger">Red = Below SMA (Bearish)</span>
+                                    </small>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <small>
+                                        <i class="fas fa-clock me-1"></i>
+                                        Based on 2-year historical data
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="card-body text-center">
+                            <i class="fas fa-chart-line text-info me-2"></i>
+                            <span class="text-muted">SMA analysis loading...</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Form -->
         <div class="row justify-content-center">
             <div class="col-md-6">
