@@ -35,7 +35,7 @@ try:
         print(f'  Total score: {result["total_score"]}')
         print(f'  Pattern score: {result["pattern_score"]}')
         print(f'  Sentiment: {result["sentiment_result"]}')
-        print(f'  Valuation score: {result["valuation_score"]}')
+
     else:
         print('NVDA prediction result:', result)
     

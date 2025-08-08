@@ -1,7 +1,7 @@
 import os
 import logging
 from flask import Flask, render_template, request, jsonify
-from stock_predictor import predict_direction, get_historical_data, analyze_patterns, get_recent_news, analyze_news_sentiment, get_valuation_metrics
+from stock_predictor import predict_direction, get_historical_data, analyze_patterns, get_recent_news, analyze_news_sentiment
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -62,15 +62,13 @@ def predict_stock():
                 'last_return': round(result['last_return'], 2),
                 'pattern_score': result['pattern_score'],
                 'sentiment_score': sentiment_result['score'],
-                'valuation_score': result['valuation_score'],
                 'total_score': total_score,
                 'news_count': sentiment_result['article_count'],
                 'sentiment_summary': sentiment_result['summary'],
                 'analysis_summary': {
                     'pattern_analysis': f"Pattern score: {result['pattern_score']} (based on historical trends and momentum)",
                     'sentiment_analysis': f"AI sentiment: {sentiment_result['score']} from {sentiment_result['article_count']} articles - {sentiment_result['summary']}",
-                    'valuation_analysis': f"Valuation score: {result['valuation_score']} (based on forward P/E ratio)"
-                }
+                      }
             })
             
         except ValueError as ve:

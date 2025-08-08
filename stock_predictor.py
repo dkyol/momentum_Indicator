@@ -194,26 +194,7 @@ def fallback_sentiment_analysis(news_titles):
     
     return sentiment_score
 
-def get_valuation_metrics(ticker):
-    """
-    Fetch basic valuation metrics like forward P/E.
-    Returns a score: positive if undervalued relative to simple threshold.
-    """
-    try:
-        stock = yf.Ticker(ticker)
-        info = stock.info
-        forward_pe = info.get('forwardPE', None)
-        if forward_pe is None or forward_pe <= 0:
-            return 0
-        # Arbitrary threshold: <20 undervalued, >50 overvalued (adjust based on sector)
-        if forward_pe < 20:
-            return 1  # Bullish
-        elif forward_pe > 50:
-            return -1  # Bearish (but growth stocks like NVDA can rally despite high PE)
-        return 0
-    except Exception as e:
-        # If valuation fetch fails, return neutral score
-        return 0
+
 
 def predict_direction(ticker):
     """
@@ -230,11 +211,9 @@ def predict_direction(ticker):
         sentiment_result = analyze_news_sentiment(news_titles)
         sentiment_score = sentiment_result['score'] if isinstance(sentiment_result, dict) else sentiment_result
         
-        # Get valuation score
-        valuation_score = get_valuation_metrics(ticker)
-        
-        # Total score: weighted sum (patterns most important, then sentiment, then valuation)
-        total_score = (pattern_score * 2) + sentiment_score + valuation_score
+               
+        # Total score: weighted sum (patterns most important, then sentiment)
+        total_score = (pattern_score * 2) + sentiment_score 
         
         # Prediction logic
         if total_score > 2:
@@ -248,7 +227,6 @@ def predict_direction(ticker):
             'prediction': prediction,
             'pattern_score': pattern_score,
             'sentiment_result': sentiment_result,
-            'valuation_score': valuation_score,
             'total_score': total_score,
             'current_price': returns_df['Adj Close'].iloc[-1],
             'last_return': returns_df['Return'].iloc[-1]
