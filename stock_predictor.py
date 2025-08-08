@@ -92,15 +92,22 @@ def get_recent_news(ticker):
         if not news:
             return []
         # Get last 10 news items' titles (or all if fewer)
-        # Handle different possible key names for title
         titles = []
         for item in news[:10]:
-            title = item.get('title') or item.get('Title') or item.get('headline', '')
-            if title:
-                titles.append(title)
+            # Handle the nested structure from yfinance API
+            if 'content' in item and 'title' in item['content']:
+                title = item['content']['title']
+                if title:
+                    titles.append(title)
+            else:
+                # Fallback to direct title access if structure is different
+                title = item.get('title') or item.get('Title') or item.get('headline', '')
+                if title:
+                    titles.append(title)
         return titles
     except Exception as e:
         # If news fetch fails, return empty list to continue with other analysis
+        print(f"News fetch error: {e}")
         return []
 
 def analyze_news_sentiment(news_titles):
