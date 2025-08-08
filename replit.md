@@ -13,6 +13,8 @@ Preferred communication style: Simple, everyday language.
 - **Theme**: Dark theme implementation using Bootstrap's dark mode
 - **User Interface**: Single-page application with real-time form validation and loading states
 - **High Volume Stocks Table**: Live data table displaying top 10 stocks ranked by daily volume with price and return metrics
+- **Momentum Analysis Table**: Technical indicators display with color-coded values and probability index progress bars
+- **Security**: Password-protected access with session-based authentication (password: Eb10f600!)
 - **Styling Approach**: Custom CSS variables for prediction states (up/down/uncertain) with color-coded results
 
 ## Backend Architecture  
@@ -26,7 +28,7 @@ Preferred communication style: Simple, everyday language.
 - **Multi-factor Analysis**: Combines three scoring components weighted differently (pattern analysis x2, sentiment, valuation)
 - **Pattern Recognition**: Analyzes historical price data for trends, momentum streaks, and dip rebounds
 - **AI-Powered Sentiment Analysis**: Uses Grok AI model for advanced news sentiment analysis with keyword-based fallback
-- **Valuation Metrics**: Basic financial health assessment using stock fundamentals
+- **Momentum Analysis**: Advanced technical indicators (RSI, Stochastic, MACD, CCI, Williams %R, ROC) with probability index calculation
 
 ## Data Processing
 - **Historical Data**: 30-day rolling window analysis of stock price movements and daily returns

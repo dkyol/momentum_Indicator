@@ -21,10 +21,14 @@ def calculate_momentum_indicators(ticker):
         start_date = datetime.now() - timedelta(days=14)
         
         # Download hourly historical data
-        data = yf.download(ticker, start=start_date, interval='1h')
+        data = yf.download(ticker, start=start_date, interval='1h', auto_adjust=True, prepost=False)
         
-        if data.empty:
+        if data is None or data.empty:
             raise ValueError(f"No data found for ticker '{ticker}' in the last two weeks.")
+        
+        # Ensure we have proper column names
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = [col[0] for col in data.columns.values]
         
         # Calculate RSI (14-period)
         delta = data['Close'].diff()
@@ -49,8 +53,9 @@ def calculate_momentum_indicators(ticker):
         # Calculate CCI (20-period)
         tp = (data['High'] + data['Low'] + data['Close']) / 3
         sma_tp = tp.rolling(20).mean()
-        mean_dev = tp.rolling(20).apply(lambda x: np.mean(np.abs(x - x.mean())))
-        data['CCI'] = (tp - sma_tp) / (0.015 * mean_dev)
+        mean_dev = tp.rolling(20).apply(lambda x: np.mean(np.abs(x - x.mean())) if len(x) > 0 else 0)
+        # Avoid division by zero
+        data['CCI'] = (tp - sma_tp) / (0.015 * mean_dev.replace(0, np.nan))
         
         # Calculate Williams %R (14-period)
         data['Williams_R'] = -100 * (high_14 - data['Close']) / (high_14 - low_14)
@@ -91,31 +96,49 @@ def calculate_probability_index(data):
             score_list = []
             
             # RSI: inverted (low RSI = high score)
-            if not pd.isna(row['RSI']):
-                score_list.append(100 - row['RSI'])
+            try:
+                if pd.notna(row['RSI']) and not np.isnan(row['RSI']):
+                    score_list.append(100 - row['RSI'])
+            except (TypeError, ValueError):
+                pass
             
             # Stochastic D: inverted
-            if not pd.isna(row['Stoch_D']):
-                score_list.append(100 - row['Stoch_D'])
+            try:
+                if pd.notna(row['Stoch_D']) and not np.isnan(row['Stoch_D']):
+                    score_list.append(100 - row['Stoch_D'])
+            except (TypeError, ValueError):
+                pass
             
             # Williams %R: negative of value (low Williams = high score)
-            if not pd.isna(row['Williams_R']):
-                score_list.append(-row['Williams_R'])
+            try:
+                if pd.notna(row['Williams_R']) and not np.isnan(row['Williams_R']):
+                    score_list.append(-row['Williams_R'])
+            except (TypeError, ValueError):
+                pass
             
             # CCI: inverted using tanh for compression
-            if not pd.isna(row['CCI']):
-                cci_score = 50 - 50 * np.tanh(row['CCI'] / std_cci)
-                score_list.append(cci_score)
+            try:
+                if pd.notna(row['CCI']) and not np.isnan(row['CCI']):
+                    cci_score = 50 - 50 * np.tanh(row['CCI'] / std_cci)
+                    score_list.append(cci_score)
+            except (TypeError, ValueError):
+                pass
             
             # MACD Histogram: inverted
-            if not pd.isna(row['MACD_Hist']):
-                macd_score = 50 - 50 * np.tanh(row['MACD_Hist'] / std_macd_hist)
-                score_list.append(macd_score)
+            try:
+                if pd.notna(row['MACD_Hist']) and not np.isnan(row['MACD_Hist']):
+                    macd_score = 50 - 50 * np.tanh(row['MACD_Hist'] / std_macd_hist)
+                    score_list.append(macd_score)
+            except (TypeError, ValueError):
+                pass
             
             # ROC: inverted
-            if not pd.isna(row['ROC']):
-                roc_score = 50 - 50 * np.tanh(row['ROC'] / std_roc)
-                score_list.append(roc_score)
+            try:
+                if pd.notna(row['ROC']) and not np.isnan(row['ROC']):
+                    roc_score = 50 - 50 * np.tanh(row['ROC'] / std_roc)
+                    score_list.append(roc_score)
+            except (TypeError, ValueError):
+                pass
             
             # Compute average score (0-100)
             if score_list:
@@ -146,7 +169,7 @@ def get_momentum_summary(tickers):
     """
     momentum_data = []
     
-    for ticker in tickers:
+    for ticker in tickers[:5]:  # Limit to 5 stocks to avoid timeout
         try:
             # Get momentum indicators
             data = calculate_momentum_indicators(ticker)
@@ -157,15 +180,23 @@ def get_momentum_summary(tickers):
                 # Get latest values
                 latest = data_with_prob.iloc[-1]
                 
+                def safe_round(value, decimals):
+                    try:
+                        if pd.notna(value) and not np.isnan(value):
+                            return round(float(value), decimals)
+                        return 'N/A'
+                    except (TypeError, ValueError):
+                        return 'N/A'
+                
                 momentum_data.append({
                     'Symbol': ticker,
-                    'RSI': round(latest['RSI'], 2) if not pd.isna(latest['RSI']) else 'N/A',
-                    'Stoch_D': round(latest['Stoch_D'], 2) if not pd.isna(latest['Stoch_D']) else 'N/A',
-                    'MACD': round(latest['MACD'], 4) if not pd.isna(latest['MACD']) else 'N/A',
-                    'CCI': round(latest['CCI'], 2) if not pd.isna(latest['CCI']) else 'N/A',
-                    'Williams_R': round(latest['Williams_R'], 2) if not pd.isna(latest['Williams_R']) else 'N/A',
-                    'ROC': round(latest['ROC'], 2) if not pd.isna(latest['ROC']) else 'N/A',
-                    'Probability_Index': round(latest['Probability_Index'], 1) if not pd.isna(latest['Probability_Index']) else 'N/A'
+                    'RSI': safe_round(latest['RSI'], 2),
+                    'Stoch_D': safe_round(latest['Stoch_D'], 2),
+                    'MACD': safe_round(latest['MACD'], 4),
+                    'CCI': safe_round(latest['CCI'], 2),
+                    'Williams_R': safe_round(latest['Williams_R'], 2),
+                    'ROC': safe_round(latest['ROC'], 2),
+                    'Probability_Index': safe_round(latest['Probability_Index'], 1)
                 })
             else:
                 momentum_data.append({

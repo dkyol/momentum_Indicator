@@ -60,10 +60,10 @@ def index():
         if not high_volume_df.empty:
             high_volume_stocks = high_volume_df.to_dict('records')
         
-        # Get momentum analysis for top 10 volume stocks
+        # Get momentum analysis for top 5 volume stocks (to reduce load time)
         momentum_data = []
         if high_volume_stocks:
-            top_symbols = [stock['Symbol'] for stock in high_volume_stocks[:10]]
+            top_symbols = [stock['Symbol'] for stock in high_volume_stocks[:5]]
             momentum_data = get_momentum_summary(top_symbols)
         
         return render_template('index.html', 
