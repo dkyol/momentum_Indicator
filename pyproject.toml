@@ -14,5 +14,6 @@ dependencies = [
     "psycopg2-binary>=2.9.10",
     "pytz>=2025.2",
     "schedule>=1.2.2",
+    "sqlalchemy>=2.0.42",
     "yfinance>=0.2.65",
 ]

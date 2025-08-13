@@ -5,6 +5,8 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from stock_analytics import get_high_volume_data
 from momentum_analyzer import get_momentum_summary
 from scheduler import get_cached_high_volume_stocks, get_cached_momentum_data, get_cached_sma_data, get_last_update_info, is_data_fresh, save_market_data
+# Import trader after app initialization to avoid circular imports
+trader = None
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -92,10 +94,23 @@ def index():
             sma_data = get_cached_sma_data()
             current_time = f"{current_time} (fresh data)"
         
+        # Get paper trading portfolio summary
+        portfolio_summary = None
+        try:
+            global trader
+            if trader is None:
+                from paper_trader import trader as global_trader
+                trader = global_trader
+            portfolio_summary = trader.get_portfolio_summary()
+        except Exception as e:
+            app.logger.error(f"Error getting portfolio summary: {e}")
+            portfolio_summary = None
+        
         return render_template('index.html', 
                              high_volume_stocks=high_volume_stocks,
                              momentum_data=momentum_data,
                              sma_data=sma_data,
+                             portfolio_summary=portfolio_summary,
                              query_time=current_time)
     except Exception as e:
         app.logger.error(f"Error loading high volume data: {str(e)}")
@@ -104,6 +119,7 @@ def index():
                              high_volume_stocks=[],
                              momentum_data=[],
                              sma_data=[],
+                             portfolio_summary=None,
                              query_time="Data unavailable")
 
 

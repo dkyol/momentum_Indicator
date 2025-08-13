@@ -848,6 +848,7 @@ dependencies = [
     { name = "psycopg2-binary" },
     { name = "pytz" },
     { name = "schedule" },
+    { name = "sqlalchemy" },
     { name = "yfinance" },
 ]
 
@@ -863,6 +864,7 @@ requires-dist = [
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "pytz", specifier = ">=2025.2" },
     { name = "schedule", specifier = ">=1.2.2" },
+    { name = "sqlalchemy", specifier = ">=2.0.42" },
     { name = "yfinance", specifier = ">=0.2.65" },
 ]
 
