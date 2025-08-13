@@ -21,14 +21,15 @@ grok_client = OpenAI(base_url="https://api.x.ai/v1",
 
 def get_high_volume_data():
     """
-    Get top 10 stocks by daily volume with prior day, week, and month returns.
+    Get top 15 stocks by daily volume with prior day, week, and month returns.
     Returns a DataFrame with stock symbols, volume, and return percentages.
     """
     try:
         # Popular high-volume tickers to analyze
         high_volume_tickers = [
-            'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'AMD', 'BBAI',
-            'SPY', 'PLTR', 'HOOD', 'MU', 'FBTC', 'SMCI', 'SNAP', 'GLD'
+            'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'AMD', 'HOOD',
+            'SPY', 'COIN', 'OPFI', 'FBTC', 'SMCI', 'ASTS', 'BBAI', 'PLTR',
+            'SNAP', 'SOXL', 'QQQ', 'SOUN'
         ]
 
         # Get current date and calculate periods
@@ -80,8 +81,8 @@ def get_high_volume_data():
         if df.empty:
             return pd.DataFrame()  # Return empty DataFrame if no data
 
-        # Sort by volume and get top 10
-        df = df.sort_values('Volume', ascending=False).head(10)
+        # Sort by volume and get top 15 (to ensure we get a good selection)
+        df = df.sort_values('Volume', ascending=False).head(15)
 
         # Round numerical values for display
         df['Current_Price'] = df['Current_Price'].round(2)
