@@ -15,7 +15,7 @@ Preferred communication style: Simple, everyday language.
 - **High Volume Stocks Table**: Live data table displaying top 10 stocks ranked by daily volume with price and return metrics
 - **Momentum Analysis Table**: Technical indicators display with color-coded values and probability index progress bars
 - **Simple Moving Averages Table**: SMA 50/200 analysis with percentage comparisons and bullish/bearish indicators
-- **Security**: Password-protected access with session-based authentication (password: Eb10f600!)
+- **Security**: Password-protected access with session-based authentication using secure environment variable (SITE_PASSWORD)
 - **Styling Approach**: Custom CSS variables for prediction states (up/down/uncertain) with color-coded results
 
 ## Backend Architecture  
@@ -42,6 +42,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Session Management
 - **Security**: Session secret key configuration with environment variable support
+- **Authentication**: Site password stored securely in SITE_PASSWORD environment variable
 - **Development Mode**: Default development key with production environment override capability
 
 # External Dependencies
