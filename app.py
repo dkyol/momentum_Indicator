@@ -26,8 +26,8 @@ def initialize_cache():
 # Call initialization
 initialize_cache()
 
-# Password for the site
-SITE_PASSWORD = "Eb10f600!"
+# Password for the site - use environment variable for security
+SITE_PASSWORD = os.environ.get("SITE_PASSWORD", "Eb10f600!")
 
 def login_required(f):
     """Decorator to require login for protected routes"""
