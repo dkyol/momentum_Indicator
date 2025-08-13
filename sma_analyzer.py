@@ -82,7 +82,7 @@ def get_sma_summary(tickers):
     """
     sma_data = []
     
-    for ticker in tickers[:5]:  # Limit to 5 stocks to avoid timeout
+    for ticker in tickers:  # Process all provided tickers
         try:
             logger.info(f"Fetching SMA data for {ticker}")
             df = get_stock_metrics(ticker)

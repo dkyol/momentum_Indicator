@@ -169,7 +169,7 @@ def get_momentum_summary(tickers):
     """
     momentum_data = []
     
-    for ticker in tickers[:5]:  # Limit to 5 stocks to avoid timeout
+    for ticker in tickers:  # Process all provided tickers
         try:
             # Get momentum indicators
             data = calculate_momentum_indicators(ticker)

@@ -43,16 +43,16 @@ def save_market_data():
         if not high_volume_df.empty:
             high_volume_stocks = high_volume_df.to_dict('records')
         
-        # Get momentum analysis for top 5 volume stocks
+        # Get momentum analysis for all high volume stocks
         momentum_data = []
         sma_data = []
         if high_volume_stocks:
-            top_symbols = [stock['Symbol'] for stock in high_volume_stocks[:5]]
-            logger.info(f"Fetching momentum analysis for: {top_symbols}")
-            momentum_data = get_momentum_summary(top_symbols)
+            all_symbols = [stock['Symbol'] for stock in high_volume_stocks]
+            logger.info(f"Fetching momentum analysis for: {all_symbols}")
+            momentum_data = get_momentum_summary(all_symbols)
             
-            logger.info(f"Fetching SMA analysis for: {top_symbols}")
-            sma_data = get_sma_summary(top_symbols)
+            logger.info(f"Fetching SMA analysis for: {all_symbols}")
+            sma_data = get_sma_summary(all_symbols)
         
         # Save data to files
         with open(HIGH_VOLUME_DATA_FILE, 'w') as f:
