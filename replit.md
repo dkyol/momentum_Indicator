@@ -12,7 +12,7 @@ Preferred communication style: Simple, everyday language.
 - **Technology Stack**: Pure HTML, CSS, and vanilla JavaScript with Bootstrap for responsive UI
 - **Theme**: Dark theme implementation using Bootstrap's dark mode
 - **User Interface**: Single-page application with real-time form validation and loading states
-- **High Volume Stocks Table**: Live data table displaying top 10 stocks ranked by daily volume with price and return metrics
+- **High Volume Stocks Table**: Live data table displaying 14 selected stocks ranked by daily volume with price and return metrics
 - **Momentum Analysis Table**: Technical indicators display with color-coded values and probability index progress bars
 - **Simple Moving Averages Table**: SMA 50/200 analysis with percentage comparisons and bullish/bearish indicators
 - **Security**: Password-protected access with session-based authentication using secure environment variable (SITE_PASSWORD)
@@ -33,7 +33,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Data Processing
 - **Historical Data**: 30-day rolling window analysis of stock price movements and daily returns
-- **High Volume Data**: Cached data system with top 10 stocks by volume including 1-day, 1-week, and 1-month returns
+- **High Volume Data**: Cached data system with 14 selected stocks by volume including 1-day, 1-week, and 1-month returns
 - **SMA Analysis**: Simple Moving Averages (50-day and 200-day) with percentage comparison calculations for trend analysis
 - **Scheduled Updates**: Daily market data refresh at 5:00 PM EST when markets are closed using automated scheduler
 - **Cache Management**: JSON-based caching system with freshness validation and automatic fallback to live data
