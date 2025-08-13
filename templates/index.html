@@ -61,23 +61,23 @@
                                     {% for stock in high_volume_stocks %}
                                     <tr>
                                         <td>
-                                            <strong class="text-primary">{{ stock.Symbol }}</strong>
+                                            <strong class="text-primary">{{ stock["Symbol"] }}</strong>
                                         </td>
-                                        <td>${{ "%.2f"|format(stock.Current_Price) }}</td>
-                                        <td>{{ "{:,}".format(stock.Volume) }}</td>
+                                        <td>${{ "%.2f"|format(stock["Current_Price"]) }}</td>
+                                        <td>{{ "{:,}".format(stock["Volume"]) }}</td>
                                         <td>
-                                            <span class="{% if stock.Day_Return > 0 %}text-success{% elif stock.Day_Return < 0 %}text-danger{% else %}text-muted{% endif %}">
-                                                {% if stock.Day_Return > 0 %}+{% endif %}{{ "%.2f"|format(stock.Day_Return) }}%
+                                            <span class="{% if stock["Day_Return"] > 0 %}text-success{% elif stock["Day_Return"] < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                                {% if stock["Day_Return"] > 0 %}+{% endif %}{{ "%.2f"|format(stock["Day_Return"]) }}%
                                             </span>
                                         </td>
                                         <td>
-                                            <span class="{% if stock.Week_Return > 0 %}text-success{% elif stock.Week_Return < 0 %}text-danger{% else %}text-muted{% endif %}">
-                                                {% if stock.Week_Return > 0 %}+{% endif %}{{ "%.2f"|format(stock.Week_Return) }}%
+                                            <span class="{% if stock["Week_Return"] > 0 %}text-success{% elif stock["Week_Return"] < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                                {% if stock["Week_Return"] > 0 %}+{% endif %}{{ "%.2f"|format(stock["Week_Return"]) }}%
                                             </span>
                                         </td>
                                         <td>
-                                            <span class="{% if stock.Month_Return > 0 %}text-success{% elif stock.Month_Return < 0 %}text-danger{% else %}text-muted{% endif %}">
-                                                {% if stock.Month_Return > 0 %}+{% endif %}{{ "%.2f"|format(stock.Month_Return) }}%
+                                            <span class="{% if stock["Month_Return"] > 0 %}text-success{% elif stock["Month_Return"] < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                                {% if stock["Month_Return"] > 0 %}+{% endif %}{{ "%.2f"|format(stock["Month_Return"]) }}%
                                             </span>
                                         </td>
                                     </tr>
