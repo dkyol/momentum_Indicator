@@ -1,24 +1,4 @@
-/* Custom styles for stock predictor */
-:root {
-    --prediction-up: #28a745;
-    --prediction-down: #dc3545;
-    --prediction-uncertain: #6c757d;
-}
-
-.prediction-up {
-    background-color: var(--prediction-up) !important;
-    color: white !important;
-}
-
-.prediction-down {
-    background-color: var(--prediction-down) !important;
-    color: white !important;
-}
-
-.prediction-uncertain {
-    background-color: var(--prediction-uncertain) !important;
-    color: white !important;
-}
+/* Custom styles for stock analytics dashboard */
 
 .card {
     border: none;

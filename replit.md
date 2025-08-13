@@ -1,6 +1,6 @@
 # Overview
 
-Stock Direction Predictor is a Flask-based web application that analyzes stock market data to predict the next-day direction (up or down) of a given stock. The application combines multiple analytical approaches including historical price pattern analysis, news sentiment analysis, and basic valuation metrics to generate predictions. Built as an educational tool, it provides users with a simple interface to input stock ticker symbols and receive probabilistic direction forecasts with detailed scoring breakdowns.
+Stock Market Analytics is a Flask-based web application that provides comprehensive real-time analysis of 14 specific stocks through synchronized data tables. The application displays high-volume stock rankings, advanced momentum analysis with technical indicators, and Simple Moving Averages comparisons. Built as an educational and analytical tool, it offers users a professional dashboard view of market data with automated daily updates and secure password protection.
 
 # User Preferences
 
@@ -11,33 +11,32 @@ Preferred communication style: Simple, everyday language.
 ## Frontend Architecture
 - **Technology Stack**: Pure HTML, CSS, and vanilla JavaScript with Bootstrap for responsive UI
 - **Theme**: Dark theme implementation using Bootstrap's dark mode
-- **User Interface**: Single-page application with real-time form validation and loading states
+- **User Interface**: Clean dashboard-style single-page application focused on data visualization
 - **High Volume Stocks Table**: Live data table displaying 14 selected stocks ranked by daily volume with price and return metrics
 - **Momentum Analysis Table**: Technical indicators display with color-coded values and probability index progress bars
 - **Simple Moving Averages Table**: SMA 50/200 analysis with percentage comparisons and bullish/bearish indicators
 - **Security**: Password-protected access with session-based authentication using secure environment variable (SITE_PASSWORD)
-- **Styling Approach**: Custom CSS variables for prediction states (up/down/uncertain) with color-coded results
+- **Styling Approach**: Clean, professional styling focused on data readability and visual hierarchy
 
 ## Backend Architecture  
 - **Framework**: Flask web framework with Python
 - **Architecture Pattern**: Simple MVC pattern with separated concerns
-- **Route Structure**: RESTful API endpoint (`/predict`) for stock analysis with JSON responses
+- **Route Structure**: Simple routing with main dashboard view and authentication endpoints
 - **Error Handling**: Comprehensive validation for ticker symbols and graceful error responses
 - **Logging**: Built-in logging configuration for debugging and monitoring
 
-## Core Prediction Logic
-- **Multi-factor Analysis**: Combines three scoring components weighted differently (pattern analysis x2, sentiment, valuation)
-- **Pattern Recognition**: Analyzes historical price data for trends, momentum streaks, and dip rebounds
-- **AI-Powered Sentiment Analysis**: Uses Grok AI model for advanced news sentiment analysis with keyword-based fallback
+## Core Analytics Logic
+- **Volume Analysis**: Real-time ranking of 14 stocks by daily trading volume with performance metrics
 - **Momentum Analysis**: Advanced technical indicators (RSI, Stochastic, MACD, CCI, Williams %R, ROC) with probability index calculation
+- **SMA Analysis**: Simple Moving Averages (50-day and 200-day) with trend comparisons and bullish/bearish indicators
 
 ## Data Processing
-- **Historical Data**: 30-day rolling window analysis of stock price movements and daily returns
+- **Real-time Data**: Live stock data fetching with 1-day, 1-week, and 1-month return calculations
 - **High Volume Data**: Cached data system with 14 selected stocks by volume including 1-day, 1-week, and 1-month returns
 - **SMA Analysis**: Simple Moving Averages (50-day and 200-day) with percentage comparison calculations for trend analysis
 - **Scheduled Updates**: Daily market data refresh at 5:00 PM EST when markets are closed using automated scheduler
 - **Cache Management**: JSON-based caching system with freshness validation and automatic fallback to live data
-- **Score Aggregation**: Weighted scoring system that combines all analytical components into a single prediction
+- **Technical Analysis**: Comprehensive technical indicator calculations with color-coded visual representations
 - **Timezone Display**: EST timezone formatting for data query timestamps
 
 ## Session Management
@@ -47,8 +46,7 @@ Preferred communication style: Simple, everyday language.
 
 # External Dependencies
 
-## AI Services
-- **X.AI Grok API**: Advanced AI model for news sentiment analysis with OpenAI-compatible interface
+## Core Dependencies
 
 ## Financial Data APIs
 - **Yahoo Finance API**: Primary data source via `yfinance` library for historical stock prices, returns calculation, and basic company metrics
@@ -59,7 +57,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Python Libraries
 - **Flask**: Core web framework for application structure and routing
-- **OpenAI**: Client library for X.AI Grok API integration with secure environment variable configuration
+- **NumPy**: Numerical computing for technical indicator calculations
 - **pandas**: Data manipulation and analysis for stock price calculations
 - **yfinance**: Yahoo Finance API wrapper for stock data retrieval
 - **schedule**: Task scheduling library for automated daily data updates at 5 PM EST

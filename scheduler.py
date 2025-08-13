@@ -11,7 +11,7 @@ import logging
 import os
 from datetime import datetime
 import pytz
-from stock_predictor import get_high_volume_data
+from stock_analytics import get_high_volume_data
 from momentum_analyzer import get_momentum_summary
 from sma_analyzer import get_sma_summary
 
