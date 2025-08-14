@@ -114,26 +114,31 @@ class PaperTrader:
                 position.quantity += quantity
                 position.average_cost = total_cost / position.quantity
             else:
-                # Create new position
+                # Create new position with entry price tracking
+                est_time = datetime.now(self.est_tz).replace(tzinfo=None)
                 position = Position(
                     symbol=symbol,
                     quantity=quantity,
                     average_cost=price,
-                    entry_time=datetime.utcnow(),
+                    entry_price=price,  # Track entry price for PnL calculation
+                    entry_time=est_time,
                     is_active=True
                 )
                 session.add(position)
             
-            # Record trade
+            # Record trade with position tracking
+            est_time = datetime.now(self.est_tz).replace(tzinfo=None)
             trade = Trade(
                 symbol=symbol,
                 trade_type='BUY',
                 quantity=quantity,
                 price=price,
-                timestamp=datetime.utcnow(),
+                timestamp=est_time,
                 investment_amount=trade_amount,
-                reason='initial',
-                portfolio_value=portfolio.total_value
+                reason='momentum_entry',
+                portfolio_value=portfolio.total_value,
+                pnl=0.0,  # No PnL on entry
+                position_id=position.id if hasattr(position, 'id') else None
             )
             session.add(trade)
             
@@ -170,28 +175,37 @@ class PaperTrader:
             cost_basis = position.quantity * position.average_cost
             pnl = sale_amount - cost_basis
             
-            # Record trade
+            # Update position with exit information
+            est_time = datetime.now(self.est_tz).replace(tzinfo=None)
+            position.exit_price = price
+            position.exit_time = est_time
+            position.realized_pnl = pnl
+            position.is_active = False
+            
+            # Record trade with comprehensive tracking
             trade = Trade(
                 symbol=symbol,
                 trade_type='SELL',
                 quantity=position.quantity,
                 price=price,
-                timestamp=datetime.utcnow(),
+                timestamp=est_time,
                 investment_amount=sale_amount,
                 reason=reason,
-                portfolio_value=portfolio.total_value + pnl
+                portfolio_value=portfolio.total_value + pnl,
+                pnl=pnl,
+                position_id=position.id
             )
             session.add(trade)
-            
-            # Mark position as inactive
-            position.is_active = False
             
             # Update portfolio P&L
             portfolio.daily_pnl += pnl
             portfolio.total_pnl += pnl
             
             session.commit()
-            self.log_message(f"SELL: {position.quantity:.4f} shares of {symbol} @ ${price:.2f} (${sale_amount:.2f}) P&L: ${pnl:.2f}", "TRADE")
+            # Log comprehensive exit information
+            entry_price = position.entry_price if hasattr(position, 'entry_price') else position.average_cost
+            pnl_pct = (pnl / cost_basis) * 100 if cost_basis > 0 else 0
+            self.log_message(f"SELL: {position.quantity:.4f} shares of {symbol} @ ${price:.2f} | Entry: ${entry_price:.2f} | Exit: ${price:.2f} | P&L: ${pnl:.2f} ({pnl_pct:+.2f}%) | Reason: {reason}", "TRADE")
             return True
             
         except Exception as e:
@@ -288,10 +302,17 @@ class PaperTrader:
     def monitoring_cycle(self):
         """Monitor positions every 15 minutes during trading hours"""
         try:
-            self.log_message("Starting 15-minute monitoring cycle", "INFO")
+            # Only monitor during market hours
+            if not self.is_trading_hours():
+                return
+                
+            est_time = datetime.now(self.est_tz)
+            self.log_message(f"Starting 15-minute monitoring cycle at {est_time.strftime('%I:%M %p EST')}", "INFO")
+            
             self.check_exit_conditions()
             self.update_portfolio_value()
-            self.log_message("Completed 15-minute monitoring cycle", "INFO")
+            
+            self.log_message(f"Completed 15-minute monitoring cycle at {est_time.strftime('%I:%M %p EST')}", "INFO")
         except Exception as e:
             self.log_message(f"Error in monitoring cycle: {e}", "ERROR")
     
@@ -305,7 +326,8 @@ class PaperTrader:
         if now.weekday() >= 5:  # Saturday = 5, Sunday = 6
             return False
         
-        return trading_start <= now <= trading_end
+        is_open = trading_start <= now <= trading_end
+        return is_open
     
     def get_portfolio_summary(self):
         """Get current portfolio summary"""
@@ -341,6 +363,28 @@ class PaperTrader:
             total_value = portfolio.cash_balance + total_position_value
             total_return = ((total_value - self.initial_investment) / self.initial_investment) * 100
             
+            # Get recent trades for journal display (last 10 trades)
+            recent_trades = session.query(Trade).order_by(Trade.timestamp.desc()).limit(10).all()
+            trades_data = []
+            for trade in recent_trades:
+                # Get entry price from position if available
+                entry_price = None
+                if trade.position_id:
+                    position = session.query(Position).filter_by(id=trade.position_id).first()
+                    if position and hasattr(position, 'entry_price'):
+                        entry_price = position.entry_price
+                
+                trades_data.append({
+                    'timestamp': trade.timestamp,
+                    'symbol': trade.symbol,
+                    'trade_type': trade.trade_type,
+                    'quantity': trade.quantity,
+                    'price': trade.price,
+                    'entry_price': entry_price,
+                    'pnl': trade.pnl if hasattr(trade, 'pnl') else 0.0,
+                    'reason': trade.reason
+                })
+
             return {
                 'cash_balance': portfolio.cash_balance,
                 'position_value': total_position_value,
@@ -348,7 +392,8 @@ class PaperTrader:
                 'total_pnl': total_value - self.initial_investment,
                 'total_return_pct': total_return,
                 'positions': positions_data,
-                'last_updated': portfolio.last_updated
+                'last_updated': portfolio.last_updated,
+                'recent_trades': trades_data
             }
             
         finally:

@@ -438,12 +438,71 @@
                         </div>
                         {% endif %}
 
+                        <!-- Trade Journal Section -->
+                        {% if portfolio_summary and portfolio_summary.recent_trades %}
+                        <div class="mt-4">
+                            <h6 class="mb-3">
+                                <i class="fas fa-clipboard-list me-2"></i>
+                                Recent Trade Journal
+                            </h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Symbol</th>
+                                            <th>Type</th>
+                                            <th>Entry Price</th>
+                                            <th>Exit Price</th>
+                                            <th>Quantity</th>
+                                            <th>P&L</th>
+                                            <th>Reason</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for trade in portfolio_summary.recent_trades %}
+                                        <tr class="{% if trade.trade_type == 'BUY' %}table-info{% else %}{% if trade.pnl > 0 %}table-success{% else %}table-danger{% endif %}{% endif %}">
+                                            <td class="small">{{ trade.timestamp.strftime('%m/%d %I:%M %p') if trade.timestamp else 'N/A' }}</td>
+                                            <td><strong>{{ trade.symbol }}</strong></td>
+                                            <td>
+                                                <span class="badge {% if trade.trade_type == 'BUY' %}bg-info{% else %}bg-warning{% endif %}">
+                                                    {{ trade.trade_type }}
+                                                </span>
+                                            </td>
+                                            <td>${{ "%.2f"|format(trade.entry_price if trade.entry_price else trade.price) }}</td>
+                                            <td>
+                                                {% if trade.trade_type == 'SELL' %}
+                                                    ${{ "%.2f"|format(trade.price) }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ "%.3f"|format(trade.quantity) }}</td>
+                                            <td>
+                                                {% if trade.pnl != 0 %}
+                                                    <span class="{% if trade.pnl > 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                                        ${{ "%.2f"|format(trade.pnl) }}
+                                                    </span>
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td class="small">{{ trade.reason|replace('_', ' ')|title }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
+
                         <div class="card-footer text-muted mt-3">
                             <div class="row">
                                 <div class="col-md-8">
                                     <small>
                                         <i class="fas fa-info-circle me-1"></i>
-                                        <strong>Strategy:</strong> Daily trades on top 2 momentum stocks at 9:35 AM EST • 
+                                        <strong>Strategy:</strong> 15-minute monitoring during market hours (9:30 AM - 4:00 PM EST) • 
+                                        Daily trades on top 2 momentum stocks at 9:35 AM EST • 
                                         Exit at +3% profit, -0.8% stop loss, or 3:34 PM EST
                                     </small>
                                 </div>

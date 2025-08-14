@@ -10,12 +10,12 @@ import os
 import time
 import threading
 import signal
+from datetime import datetime, timedelta
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from paper_trader import trader
 import schedule
 import logging
-from datetime import datetime
 import pytz
 
 # Configure logging
@@ -62,16 +62,18 @@ class TradingMonitor:
                 current_time = datetime.now(self.est_tz)
                 
                 if self.is_market_open():
-                    logger.info(f"Market is open - Running monitoring cycle at {current_time.strftime('%I:%M %p EST')}")
+                    logger.info(f"Market is OPEN - Running 15-minute monitoring cycle at {current_time.strftime('%I:%M %p EST')}")
                     
-                    # Run monitoring cycle
+                    # Run monitoring cycle (will check positions and update portfolio timestamp)
                     trader.monitoring_cycle()
                     
-                    # Sleep for 15 minutes during market hours
+                    # Sleep for exactly 15 minutes during market hours
                     sleep_time = 900  # 15 minutes
-                    logger.info(f"Next monitoring check in 15 minutes...")
+                    next_check = (current_time + timedelta(minutes=15)).strftime('%I:%M %p EST')
+                    logger.info(f"Market monitoring: Next position check scheduled for {next_check}")
                 else:
-                    logger.info(f"Market is closed - Checking again in 30 minutes at {current_time.strftime('%I:%M %p EST')}")
+                    logger.info(f"Market is CLOSED - No monitoring needed. Current time: {current_time.strftime('%I:%M %p EST')}")
+                    # Sleep for 30 minutes when market is closed
                     sleep_time = 1800  # 30 minutes during non-market hours
                 
                 # Sleep in smaller chunks to allow for graceful shutdown

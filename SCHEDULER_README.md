@@ -32,9 +32,12 @@ Runs the basic trading scheduler in the background.
   - -0.8% stop loss  
   - 3:34 PM EST end-of-day close
 
-## Portfolio Timestamp
+## Portfolio Monitoring
 
-The portfolio "Last updated" timestamp shows in 12-hour EST format and updates every 15 minutes during market hours when the system checks positions for buy/sell decisions.
+- **Timestamp Updates**: Portfolio "Last updated" shows in 12-hour EST format and updates every 15 minutes during market hours ONLY (9:30 AM - 4:00 PM EST, Monday-Friday)
+- **Market Hours Detection**: System only monitors positions when market is open
+- **Trade Journal**: Comprehensive entry/exit tracking with detailed P&L calculations
+- **Position Tracking**: Each trade records entry price, exit price, timestamps, and profit/loss impact on investment amount
 
 ## Files Generated
 
