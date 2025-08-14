@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Market Data Scheduler
-Fetches high volume stocks and momentum analysis data once daily at 5 PM EST.
+Fetches high volume stocks and momentum analysis data once daily at 10:05 AM EST.
 """
 
 import schedule
@@ -123,7 +123,7 @@ def get_last_update_info():
 
 def is_data_fresh():
     """
-    Check if cached data is from today (after 5 PM EST).
+    Check if cached data is from today (after 10:05 AM EST).
     """
     try:
         update_info = get_last_update_info()
@@ -132,29 +132,33 @@ def is_data_fresh():
         
         est = pytz.timezone('US/Eastern')
         last_update = datetime.fromisoformat(update_info['last_update'])
-        today_5pm = datetime.now(est).replace(hour=17, minute=0, second=0, microsecond=0)
+        today_1005am = datetime.now(est).replace(hour=10, minute=5, second=0, microsecond=0)
         
-        # Data is fresh if it was updated today after 5 PM EST
-        return last_update >= today_5pm and last_update.date() == today_5pm.date()
+        # Data is fresh if it was updated today after 10:05 AM EST
+        return last_update >= today_1005am and last_update.date() == today_1005am.date()
     except Exception as e:
         logger.error(f"Error checking data freshness: {e}")
         return False
 
 def run_scheduler():
     """
-    Run the scheduler to update market data daily at 5 PM EST.
+    Run the scheduler to update market data daily at 10:05 AM EST.
     """
     logger.info("Starting market data scheduler...")
     
-    # Schedule daily update at 5 PM EST
-    schedule.every().day.at("17:00").do(save_market_data)
+    # Schedule daily update at 10:05 AM EST (15:05 UTC during EST)
+    schedule.every().monday.at("15:05").do(save_market_data)
+    schedule.every().tuesday.at("15:05").do(save_market_data)
+    schedule.every().wednesday.at("15:05").do(save_market_data)
+    schedule.every().thursday.at("15:05").do(save_market_data)
+    schedule.every().friday.at("15:05").do(save_market_data)
     
     # Run initial update if no fresh data exists
     if not is_data_fresh():
         logger.info("No fresh data found, running initial update...")
         save_market_data()
     
-    logger.info("Scheduler configured. Market data will update daily at 5:00 PM EST")
+    logger.info("Scheduler configured. Market data will update daily at 10:05 AM EST (Monday-Friday)")
     
     while True:
         schedule.run_pending()

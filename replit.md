@@ -36,10 +36,10 @@ Preferred communication style: Simple, everyday language.
 - **Real-time Data**: Live stock data fetching with 1-day, 1-week, and 1-month return calculations
 - **High Volume Data**: Cached data system with 14 selected stocks by volume including 1-day, 1-week, and 1-month returns
 - **SMA Analysis**: Simple Moving Averages (50-day and 200-day) with percentage comparison calculations for trend analysis
-- **Scheduled Updates**: Daily market data refresh at 5:00 PM EST when markets are closed using automated scheduler
+- **Scheduled Updates**: Daily market data refresh at 10:05 AM EST (Monday-Friday) during market hours using automated scheduler
 - **Cache Management**: JSON-based caching system with freshness validation and automatic fallback to live data
 - **Technical Analysis**: Comprehensive technical indicator calculations with color-coded visual representations
-- **Paper Trading Execution**: Automated daily stock purchases of top 2 momentum stocks (10% allocation each) at 9:35 AM EST
+- **Paper Trading Execution**: Automated daily stock purchases of top 2 momentum stocks (10% allocation each) at 10:15 AM EST
 - **Real-time Monitoring**: 15-minute price checks during trading hours with automatic exit conditions
 - **Risk Management**: Systematic exits at +3% profit target, -0.8% stop loss, or 3:34 PM EST end-of-day close
 - **Portfolio Tracking**: Real-time portfolio value updates with position-level P&L calculations and trade history

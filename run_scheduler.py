@@ -91,13 +91,20 @@ class TradingMonitor:
                 time.sleep(60)  # Wait 1 minute before retrying
     
     def schedule_daily_trades(self):
-        """Schedule daily morning trades"""
-        # Schedule morning trades at 9:35 AM EST (converted to UTC)
-        schedule.every().monday.at("14:35").do(trader.morning_trade_execution)  # 9:35 AM EST = 14:35 UTC (EST+5)
-        schedule.every().tuesday.at("14:35").do(trader.morning_trade_execution)
-        schedule.every().wednesday.at("14:35").do(trader.morning_trade_execution)
-        schedule.every().thursday.at("14:35").do(trader.morning_trade_execution)
-        schedule.every().friday.at("14:35").do(trader.morning_trade_execution)
+        """Schedule daily morning trades and data updates"""
+        # Schedule data updates at 10:05 AM EST (converted to UTC)
+        schedule.every().monday.at("15:05").do(self.update_market_data)  # 10:05 AM EST = 15:05 UTC (EST+5)
+        schedule.every().tuesday.at("15:05").do(self.update_market_data)
+        schedule.every().wednesday.at("15:05").do(self.update_market_data)
+        schedule.every().thursday.at("15:05").do(self.update_market_data)
+        schedule.every().friday.at("15:05").do(self.update_market_data)
+        
+        # Schedule morning trades at 10:15 AM EST (after data updates)
+        schedule.every().monday.at("15:15").do(trader.morning_trade_execution)  # 10:15 AM EST = 15:15 UTC (EST+5)
+        schedule.every().tuesday.at("15:15").do(trader.morning_trade_execution)
+        schedule.every().wednesday.at("15:15").do(trader.morning_trade_execution)
+        schedule.every().thursday.at("15:15").do(trader.morning_trade_execution)
+        schedule.every().friday.at("15:15").do(trader.morning_trade_execution)
         
         # Schedule end-of-day close at 3:34 PM EST
         schedule.every().monday.at("20:34").do(trader.end_of_day_close)  # 3:34 PM EST = 20:34 UTC
@@ -107,8 +114,23 @@ class TradingMonitor:
         schedule.every().friday.at("20:34").do(trader.end_of_day_close)
         
         logger.info("Daily trading schedule configured")
-        logger.info("Morning trades: 9:35 AM EST (Monday-Friday)")
+        logger.info("Data updates: 10:05 AM EST (Monday-Friday)")
+        logger.info("Morning trades: 10:15 AM EST (Monday-Friday)")
         logger.info("End-of-day close: 3:34 PM EST (Monday-Friday)")
+    
+    def update_market_data(self):
+        """Update market data at 10:05 AM EST"""
+        try:
+            current_time = datetime.now(self.est_tz)
+            logger.info(f"Starting scheduled market data update at {current_time.strftime('%I:%M %p EST')}")
+            
+            # Import and call the data update function
+            from scheduler import save_market_data
+            save_market_data()
+            
+            logger.info("Market data update completed successfully")
+        except Exception as e:
+            logger.error(f"Error updating market data: {e}")
     
     def run_scheduler(self):
         """Run scheduled tasks (morning trades and EOD close)"""
@@ -140,7 +162,8 @@ if __name__ == "__main__":
     print("PAPER TRADING MONITOR STARTING")
     print("=" * 60)
     print("Trading Strategy:")
-    print("• Daily entry: 9:35 AM EST (top 2 momentum stocks)")
+    print("• Daily data update: 10:05 AM EST (Monday-Friday)")
+    print("• Daily entry: 10:15 AM EST (top 2 momentum stocks)")
     print("• 15-minute monitoring during market hours (9:30 AM - 4:00 PM EST)")
     print("• Exit conditions: +3% profit, -0.8% stop loss, or 3:34 PM EST")
     print("• Initial investment: $10,000")
