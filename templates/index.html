@@ -87,7 +87,7 @@
                         </div>
                         <div class="card-footer text-muted text-center small">
                             <i class="fas fa-clock me-1"></i>
-                            Data queried on {{ query_time }}
+                            {{ query_time }}
                         </div>
                         {% else %}
                         <div class="card-body text-center">
@@ -228,7 +228,7 @@
                                 <div class="col-md-4 text-end">
                                     <small>
                                         <i class="fas fa-clock me-1"></i>
-                                        Based on last 2 weeks hourly data
+                                        {{ query_time }}
                                     </small>
                                 </div>
                             </div>
@@ -326,7 +326,7 @@
                                 <div class="col-md-4 text-end">
                                     <small>
                                         <i class="fas fa-clock me-1"></i>
-                                        Based on 2-year historical data
+                                        {{ query_time }}
                                     </small>
                                 </div>
                             </div>

@@ -30,7 +30,7 @@ def save_market_data():
     Fetch and save high volume stocks and momentum analysis data.
     """
     try:
-        logger.info("Starting daily market data update...")
+        logger.info("Starting synchronized daily market data update...")
         
         # Get current EST time
         est = pytz.timezone('US/Eastern')
