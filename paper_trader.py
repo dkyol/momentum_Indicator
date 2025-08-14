@@ -72,8 +72,11 @@ class PaperTrader:
     def get_top_momentum_stocks(self):
         """Get top 2 stocks from momentum analysis by probability index"""
         try:
-            momentum_data = get_momentum_summary()
+            # Use the fixed list of 14 stocks for momentum analysis
+            tickers = ['NVDA', 'AMD', 'TSLA', 'SPY', 'HOOD', 'AMZN', 'GOOGL', 'SMCI', 'IONQ', 'COIN', 'ASTS', 'CRDO', 'RBRK', 'OPFI']
+            momentum_data = get_momentum_summary(tickers)
             if not momentum_data:
+                self.log_message("No momentum data available", "ERROR")
                 return []
             
             # Sort by probability index (descending) and get top 2
@@ -81,7 +84,7 @@ class PaperTrader:
             top_2 = sorted_stocks[:2]
             
             symbols = [stock['Symbol'] for stock in top_2]
-            self.log_message(f"Top momentum stocks selected: {symbols}", "INFO")
+            self.log_message(f"Top momentum stocks selected: {symbols} with probability indices: {[s.get('Probability_Index', 0) for s in top_2]}", "INFO")
             return symbols
         except Exception as e:
             self.log_message(f"Error getting momentum stocks: {e}", "ERROR")
