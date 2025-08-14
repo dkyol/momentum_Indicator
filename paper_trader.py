@@ -256,8 +256,12 @@ class PaperTrader:
                     total_position_value += position.quantity * current_price
             
             portfolio.total_value = portfolio.cash_balance + total_position_value
-            portfolio.last_updated = datetime.utcnow()
+            # Update with EST timezone
+            est_tz = pytz.timezone('US/Eastern')
+            portfolio.last_updated = datetime.now(est_tz).replace(tzinfo=None)  # Store as naive datetime
             session.commit()
+            
+            self.log_message(f"Portfolio updated: Total Value ${portfolio.total_value:.2f}, Positions: {len(active_positions)}", "INFO")
             
         finally:
             session.close()
@@ -284,8 +288,10 @@ class PaperTrader:
     def monitoring_cycle(self):
         """Monitor positions every 15 minutes during trading hours"""
         try:
+            self.log_message("Starting 15-minute monitoring cycle", "INFO")
             self.check_exit_conditions()
             self.update_portfolio_value()
+            self.log_message("Completed 15-minute monitoring cycle", "INFO")
         except Exception as e:
             self.log_message(f"Error in monitoring cycle: {e}", "ERROR")
     
@@ -373,7 +379,10 @@ def start_trading_scheduler():
         while True:
             if trader.is_trading_hours():
                 trader.monitoring_cycle()
-            time.sleep(900)  # 15 minutes
+                time.sleep(900)  # 15 minutes
+            else:
+                # Check every 30 minutes during non-trading hours
+                time.sleep(1800)
     
     # Start monitoring in a separate thread
     monitor_thread = threading.Thread(target=continuous_monitoring, daemon=True)

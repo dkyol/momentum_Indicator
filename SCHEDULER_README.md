@@ -1,69 +1,46 @@
-# Market Data Scheduler
+# Paper Trading Monitor
 
-This system automatically updates market data once daily at 5:00 PM EST when markets are closed.
+This system provides automated paper trading capabilities with real-time monitoring.
 
-## How It Works
+## Starting the Trading System
 
-### Automatic Caching System
-- Market data (high volume stocks and momentum analysis) is fetched and cached in JSON files
-- Data is automatically refreshed daily at 5 PM EST
-- Web application uses cached data for fast loading times
-- Falls back to live data fetching if cache is stale
-
-### Cache Files
-- `cached_high_volume_stocks.json` - Top 10 stocks by daily volume
-- `cached_momentum_data.json` - Technical indicators for top 5 stocks
-- `last_data_update.json` - Update timestamp and metadata
-
-### Scheduling Components
-
-#### 1. scheduler.py
-Core scheduling functions:
-- `save_market_data()` - Fetches and caches market data
-- `is_data_fresh()` - Checks if cached data is current
-- `get_cached_*()` - Retrieves cached data
-
-#### 2. run_scheduler.py
-Background scheduler process:
-- Runs continuous loop checking for scheduled updates
-- Configured to run daily at 5 PM EST
-- Includes error handling and logging
-
-#### 3. daily_update.sh
-Manual update script:
-```bash
-./daily_update.sh
-```
-
-### Manual Operations
-
-To manually update data:
-```bash
-python3 scheduler.py
-```
-
-To run background scheduler:
+### Option 1: Quick Start (Background Monitor)
 ```bash
 python3 run_scheduler.py
 ```
+This starts the full trading monitor that:
+- Updates portfolio timestamps every 15 minutes during market hours (9:30 AM - 4:00 PM EST)  
+- Executes trades at 9:35 AM EST daily
+- Closes positions at 3:34 PM EST or when profit/loss targets are hit
+- Logs all activities to `trading_monitor.log`
 
-### Integration with Flask App
+### Option 2: Simple Trading Script
+```bash
+./start_trader.sh
+```
+Runs the basic trading scheduler in the background.
 
-The main application automatically:
-1. Initializes cache on startup if stale
-2. Uses cached data for web requests
-3. Shows cache status in UI ("Last updated: ..." or "fresh data")
+## Trading Strategy
 
-### Benefits
+- **Initial Investment**: $10,000
+- **Entry Time**: 9:35 AM EST daily (Monday-Friday)
+- **Stock Selection**: Top 2 stocks by momentum probability index
+- **Position Size**: 10% of portfolio value per trade
+- **Monitoring**: Every 15 minutes during market hours
+- **Exit Conditions**:
+  - +3% profit target
+  - -0.8% stop loss  
+  - 3:34 PM EST end-of-day close
 
-1. **Performance**: Fast page loads using cached data
-2. **Reliability**: Reduces API calls and potential rate limiting
-3. **Efficiency**: Updates once daily when markets are closed
-4. **Fallback**: Automatically fetches fresh data if cache fails
+## Portfolio Timestamp
 
-### EST Scheduling
+The portfolio "Last updated" timestamp shows in 12-hour EST format and updates every 15 minutes during market hours when the system checks positions for buy/sell decisions.
 
-The system is configured to update at 5 PM EST specifically because:
-- US stock markets close at 4 PM EST
-- Allows 1 hour buffer for end-of-day data processing
-- Ensures fresh data is available for next day's analysis
+## Files Generated
+
+- `trading_monitor.log` - Detailed trading activity log
+- `trading.log` - Basic trading activities (from start_trader.sh)
+
+## Stopping the System
+
+Press `Ctrl+C` to stop the trading monitor gracefully.

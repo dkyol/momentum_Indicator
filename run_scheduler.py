@@ -1,53 +1,167 @@
 #!/usr/bin/env python3
 """
-Background scheduler runner for market data updates.
-This runs the scheduler in a separate process to update data daily at 5 PM EST.
+Background Trading Monitor
+Runs the paper trading monitoring system in the background.
+This should be started separately from the web application.
 """
 
-import schedule
+import sys
+import os
 import time
+import threading
+import signal
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from paper_trader import trader
+import schedule
 import logging
-import pytz
 from datetime import datetime
-from scheduler import save_market_data, is_data_fresh
+import pytz
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('trading_monitor.log'),
+        logging.StreamHandler()
+    ]
+)
+
 logger = logging.getLogger(__name__)
 
-def main():
-    """
-    Main scheduler loop that runs market data updates daily at 5 PM EST.
-    """
-    logger.info("Starting market data scheduler...")
+class TradingMonitor:
+    def __init__(self):
+        self.running = True
+        self.est_tz = pytz.timezone('US/Eastern')
     
-    # Set timezone to EST for scheduling
-    est = pytz.timezone('US/Eastern')
+    def stop(self):
+        self.running = False
+        logger.info("Trading monitor stopped")
     
-    # Schedule daily update at 5 PM EST
-    schedule.every().day.at("17:00").do(save_market_data)
+    def is_market_open(self):
+        """Check if market is currently open (9:30 AM - 4:00 PM EST, Mon-Fri)"""
+        now = datetime.now(self.est_tz)
+        
+        # Check if it's a weekday
+        if now.weekday() >= 5:  # Saturday = 5, Sunday = 6
+            return False
+        
+        # Market hours: 9:30 AM - 4:00 PM EST
+        market_open = now.replace(hour=9, minute=30, second=0, microsecond=0)
+        market_close = now.replace(hour=16, minute=0, second=0, microsecond=0)
+        
+        return market_open <= now <= market_close
     
-    # Run initial update if no fresh data exists
-    if not is_data_fresh():
-        logger.info("No fresh data found, running initial update...")
-        save_market_data()
-    else:
-        logger.info("Fresh data already exists, using cached data")
+    def continuous_monitor(self):
+        """Continuously monitor positions during market hours"""
+        logger.info("Starting continuous trading monitor...")
+        
+        while self.running:
+            try:
+                current_time = datetime.now(self.est_tz)
+                
+                if self.is_market_open():
+                    logger.info(f"Market is open - Running monitoring cycle at {current_time.strftime('%I:%M %p EST')}")
+                    
+                    # Run monitoring cycle
+                    trader.monitoring_cycle()
+                    
+                    # Sleep for 15 minutes during market hours
+                    sleep_time = 900  # 15 minutes
+                    logger.info(f"Next monitoring check in 15 minutes...")
+                else:
+                    logger.info(f"Market is closed - Checking again in 30 minutes at {current_time.strftime('%I:%M %p EST')}")
+                    sleep_time = 1800  # 30 minutes during non-market hours
+                
+                # Sleep in smaller chunks to allow for graceful shutdown
+                for _ in range(sleep_time // 10):
+                    if not self.running:
+                        break
+                    time.sleep(10)
+                
+            except KeyboardInterrupt:
+                logger.info("Received interrupt signal")
+                self.stop()
+                break
+            except Exception as e:
+                logger.error(f"Error in monitoring loop: {e}")
+                time.sleep(60)  # Wait 1 minute before retrying
     
-    logger.info("Scheduler configured. Market data will update daily at 5:00 PM EST")
-    logger.info("Current time: {}".format(datetime.now(est).strftime("%Y-%m-%d %H:%M:%S %Z")))
+    def schedule_daily_trades(self):
+        """Schedule daily morning trades"""
+        # Schedule morning trades at 9:35 AM EST (converted to UTC)
+        schedule.every().monday.at("14:35").do(trader.morning_trade_execution)  # 9:35 AM EST = 14:35 UTC (EST+5)
+        schedule.every().tuesday.at("14:35").do(trader.morning_trade_execution)
+        schedule.every().wednesday.at("14:35").do(trader.morning_trade_execution)
+        schedule.every().thursday.at("14:35").do(trader.morning_trade_execution)
+        schedule.every().friday.at("14:35").do(trader.morning_trade_execution)
+        
+        # Schedule end-of-day close at 3:34 PM EST
+        schedule.every().monday.at("20:34").do(trader.end_of_day_close)  # 3:34 PM EST = 20:34 UTC
+        schedule.every().tuesday.at("20:34").do(trader.end_of_day_close)
+        schedule.every().wednesday.at("20:34").do(trader.end_of_day_close)
+        schedule.every().thursday.at("20:34").do(trader.end_of_day_close)
+        schedule.every().friday.at("20:34").do(trader.end_of_day_close)
+        
+        logger.info("Daily trading schedule configured")
+        logger.info("Morning trades: 9:35 AM EST (Monday-Friday)")
+        logger.info("End-of-day close: 3:34 PM EST (Monday-Friday)")
     
-    # Keep the scheduler running
-    while True:
-        try:
-            schedule.run_pending()
-            time.sleep(60)  # Check every minute
-        except KeyboardInterrupt:
-            logger.info("Scheduler stopped by user")
-            break
-        except Exception as e:
-            logger.error(f"Error in scheduler loop: {e}")
-            time.sleep(60)  # Continue running even if there's an error
+    def run_scheduler(self):
+        """Run scheduled tasks (morning trades and EOD close)"""
+        while self.running:
+            try:
+                schedule.run_pending()
+                time.sleep(60)  # Check every minute for scheduled tasks
+            except KeyboardInterrupt:
+                logger.info("Scheduler interrupted")
+                self.stop()
+                break
+            except Exception as e:
+                logger.error(f"Error in scheduler: {e}")
+                time.sleep(60)
+
+def signal_handler(signum, frame):
+    """Handle shutdown signals gracefully"""
+    logger.info(f"Received signal {signum}, shutting down...")
+    monitor.stop()
 
 if __name__ == "__main__":
-    main()
+    # Set up signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    monitor = TradingMonitor()
+    
+    print("=" * 60)
+    print("PAPER TRADING MONITOR STARTING")
+    print("=" * 60)
+    print("Trading Strategy:")
+    print("• Daily entry: 9:35 AM EST (top 2 momentum stocks)")
+    print("• 15-minute monitoring during market hours (9:30 AM - 4:00 PM EST)")
+    print("• Exit conditions: +3% profit, -0.8% stop loss, or 3:34 PM EST")
+    print("• Initial investment: $10,000")
+    print("• Position size: 10% per trade")
+    print("=" * 60)
+    print("Press Ctrl+C to stop")
+    print("=" * 60)
+    
+    try:
+        # Schedule daily trades
+        monitor.schedule_daily_trades()
+        
+        # Start scheduler in a separate thread
+        scheduler_thread = threading.Thread(target=monitor.run_scheduler, daemon=True)
+        scheduler_thread.start()
+        
+        # Start continuous monitoring (main thread)
+        monitor.continuous_monitor()
+        
+    except KeyboardInterrupt:
+        logger.info("Trading monitor stopped by user")
+    except Exception as e:
+        logger.error(f"Trading monitor error: {e}")
+    finally:
+        monitor.stop()
+        print("\nTrading monitor stopped.")
