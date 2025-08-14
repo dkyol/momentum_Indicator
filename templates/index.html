@@ -503,6 +503,7 @@
                                         <i class="fas fa-info-circle me-1"></i>
                                         <strong>Strategy:</strong> Daily data updates at 10:05 AM EST • 
                                         Daily trades on top 2 momentum stocks at 10:15 AM EST • 
+                                        2-minute monitoring during market hours • 
                                         Exit at +3% profit, -0.8% stop loss, or 3:34 PM EST
                                     </small>
                                 </div>
@@ -591,12 +592,12 @@
             });
         }
 
-        // Run monitoring every 15 minutes during market hours
+        // Run monitoring every 2 minutes during market hours
         setInterval(function() {
             if (isMarketOpen()) {
                 triggerMonitoring();
             }
-        }, 900000); // 15 minutes
+        }, 120000); // 2 minutes
 
         // Auto-refresh page every 5 minutes
         setInterval(function() {

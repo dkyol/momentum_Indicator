@@ -40,7 +40,7 @@ Preferred communication style: Simple, everyday language.
 - **Cache Management**: JSON-based caching system with freshness validation and automatic fallback to live data
 - **Technical Analysis**: Comprehensive technical indicator calculations with color-coded visual representations
 - **Paper Trading Execution**: Automated daily stock purchases of top 2 momentum stocks (10% allocation each) at 10:15 AM EST
-- **Real-time Monitoring**: 15-minute price checks during trading hours with automatic exit conditions
+- **Real-time Monitoring**: 2-minute price checks during trading hours with automatic exit conditions
 - **Risk Management**: Systematic exits at +3% profit target, -0.8% stop loss, or 3:34 PM EST end-of-day close
 - **Portfolio Tracking**: Real-time portfolio value updates with position-level P&L calculations and trade history
 - **Database Storage**: PostgreSQL backend storing all trades, positions, and portfolio performance metrics

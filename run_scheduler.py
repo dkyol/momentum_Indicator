@@ -62,14 +62,14 @@ class TradingMonitor:
                 current_time = datetime.now(self.est_tz)
                 
                 if self.is_market_open():
-                    logger.info(f"Market is OPEN - Running 15-minute monitoring cycle at {current_time.strftime('%I:%M %p EST')}")
+                    logger.info(f"Market is OPEN - Running 2-minute monitoring cycle at {current_time.strftime('%I:%M %p EST')}")
                     
                     # Run monitoring cycle (will check positions and update portfolio timestamp)
                     trader.monitoring_cycle()
                     
-                    # Sleep for exactly 15 minutes during market hours
-                    sleep_time = 900  # 15 minutes
-                    next_check = (current_time + timedelta(minutes=15)).strftime('%I:%M %p EST')
+                    # Sleep for exactly 2 minutes during market hours
+                    sleep_time = 120  # 2 minutes
+                    next_check = (current_time + timedelta(minutes=2)).strftime('%I:%M %p EST')
                     logger.info(f"Market monitoring: Next position check scheduled for {next_check}")
                 else:
                     logger.info(f"Market is CLOSED - No monitoring needed. Current time: {current_time.strftime('%I:%M %p EST')}")
@@ -164,7 +164,7 @@ if __name__ == "__main__":
     print("Trading Strategy:")
     print("• Daily data update: 10:05 AM EST (Monday-Friday)")
     print("• Daily entry: 10:15 AM EST (top 2 momentum stocks)")
-    print("• 15-minute monitoring during market hours (9:30 AM - 4:00 PM EST)")
+    print("• 2-minute monitoring during market hours (9:30 AM - 4:00 PM EST)")
     print("• Exit conditions: +3% profit, -0.8% stop loss, or 3:34 PM EST")
     print("• Initial investment: $10,000")
     print("• Position size: 10% per trade")

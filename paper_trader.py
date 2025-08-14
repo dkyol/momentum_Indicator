@@ -303,19 +303,19 @@ class PaperTrader:
             self.log_message(f"Error in morning trade execution: {e}", "ERROR")
     
     def monitoring_cycle(self):
-        """Monitor positions every 15 minutes during trading hours"""
+        """Monitor positions every 2 minutes during trading hours"""
         try:
             # Only monitor during market hours
             if not self.is_trading_hours():
                 return
                 
             est_time = datetime.now(self.est_tz)
-            self.log_message(f"Starting 15-minute monitoring cycle at {est_time.strftime('%I:%M %p EST')}", "INFO")
+            self.log_message(f"Starting 2-minute monitoring cycle at {est_time.strftime('%I:%M %p EST')}", "INFO")
             
             self.check_exit_conditions()
             self.update_portfolio_value()
             
-            self.log_message(f"Completed 15-minute monitoring cycle at {est_time.strftime('%I:%M %p EST')}", "INFO")
+            self.log_message(f"Completed 2-minute monitoring cycle at {est_time.strftime('%I:%M %p EST')}", "INFO")
         except Exception as e:
             self.log_message(f"Error in monitoring cycle: {e}", "ERROR")
     
