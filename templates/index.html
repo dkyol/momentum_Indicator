@@ -539,6 +539,75 @@
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         })
+
+        // Function to check if market is open
+        function isMarketOpen() {
+            const now = new Date();
+            const est = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+            const hour = est.getHours();
+            const minute = est.getMinutes();
+            const dayOfWeek = est.getDay(); // 0 = Sunday, 1 = Monday, etc.
+            
+            // Check if market is open (9:30 AM - 4:00 PM EST, Monday-Friday)
+            const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+            const isMarketHours = (hour > 9 || (hour === 9 && minute >= 30)) && hour < 16;
+            
+            return isWeekday && isMarketHours;
+        }
+
+        // Function to trigger monitoring
+        function triggerMonitoring() {
+            if (!isMarketOpen()) {
+                console.log('Market is closed - skipping monitoring');
+                return;
+            }
+
+            console.log('Triggering portfolio monitoring...');
+            
+            fetch('/trigger_monitoring', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Monitoring completed:', data);
+                    // Update the last updated timestamp in the UI
+                    const lastUpdatedElements = document.querySelectorAll('small:contains("Last updated")');
+                    lastUpdatedElements.forEach(element => {
+                        if (data.last_updated && element.textContent.includes('Last updated')) {
+                            element.innerHTML = '<i class="fas fa-clock me-1"></i>Last updated: ' + data.last_updated;
+                        }
+                    });
+                } else {
+                    console.error('Monitoring failed:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Monitoring request failed:', error);
+            });
+        }
+
+        // Run monitoring every 15 minutes during market hours
+        setInterval(function() {
+            if (isMarketOpen()) {
+                triggerMonitoring();
+            }
+        }, 900000); // 15 minutes
+
+        // Auto-refresh page every 5 minutes
+        setInterval(function() {
+            location.reload();
+        }, 300000); // 5 minutes
+
+        // Run initial monitoring check if market is open
+        if (isMarketOpen()) {
+            console.log('Market is open - running initial monitoring check in 30 seconds');
+            setTimeout(triggerMonitoring, 30000); // 30 seconds after page load
+        }
     </script>
 </body>
 </html>

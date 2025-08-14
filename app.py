@@ -128,6 +128,35 @@ def index():
 
 
 
+@app.route('/trigger_monitoring', methods=['POST'])
+def trigger_monitoring():
+    """Trigger portfolio monitoring and return updated status"""
+    try:
+        global trader
+        if trader is None:
+            from paper_trader import trader as global_trader
+            trader = global_trader
+        
+        # Run monitoring cycle
+        trader.monitoring_cycle()
+        
+        # Get updated portfolio summary
+        portfolio_summary = trader.get_portfolio_summary()
+        
+        return jsonify({
+            'success': True,
+            'last_updated': portfolio_summary['last_updated'].strftime('%I:%M %p EST') if portfolio_summary.get('last_updated') else None,
+            'total_value': portfolio_summary.get('total_value', 0),
+            'total_pnl': portfolio_summary.get('total_pnl', 0),
+            'message': 'Portfolio monitoring completed'
+        })
+    except Exception as e:
+        app.logger.error(f"Error in monitoring trigger: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.errorhandler(404)
 def not_found(error):
     return render_template('index.html'), 404
