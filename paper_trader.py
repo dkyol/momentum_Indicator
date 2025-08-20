@@ -283,9 +283,41 @@ class PaperTrader:
         finally:
             session.close()
     
-    def morning_trade_execution(self):
-        """Execute morning trades at 9:35 AM EST"""
+    def is_valid_trading_time(self):
+        """Check if current time is valid for trading (10:15 AM EST on weekdays)"""
+        now = datetime.now(self.est_tz)
+        
+        # Check if it's a weekday (Monday=0, Friday=4)
+        if now.weekday() > 4:  # Saturday=5, Sunday=6
+            return False, "Trading only occurs Monday-Friday"
+        
+        # Check if it's during market hours (9:30 AM - 4:00 PM EST)
+        current_time = now.time()
+        market_open = datetime.strptime("09:30", "%H:%M").time()
+        market_close = datetime.strptime("16:00", "%H:%M").time()
+        
+        if not (market_open <= current_time <= market_close):
+            return False, "Trading only occurs during market hours (9:30 AM - 4:00 PM EST)"
+        
+        # For scheduled trades, must be exactly 10:15 AM
+        scheduled_time = datetime.strptime("10:15", "%H:%M").time()
+        current_hour_minute = datetime.strptime(f"{current_time.hour:02d}:{current_time.minute:02d}", "%H:%M").time()
+        
+        if current_hour_minute != scheduled_time:
+            return False, f"Scheduled trades only execute at 10:15 AM EST, current time is {now.strftime('%I:%M %p EST')}"
+        
+        return True, "Valid trading time"
+
+    def morning_trade_execution(self, force_execute=False):
+        """Execute morning trades at 10:15 AM EST with time validation"""
         try:
+            # Validate trading time unless forced (for testing/recovery)
+            if not force_execute:
+                is_valid, reason = self.is_valid_trading_time()
+                if not is_valid:
+                    self.log_message(f"Trade execution blocked: {reason}", "WARNING")
+                    return False
+            
             self.log_message("Starting morning trade execution", "INFO")
             
             # Get top 2 momentum stocks
