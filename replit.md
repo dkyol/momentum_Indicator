@@ -26,14 +26,14 @@ Preferred communication style: Simple, everyday language.
 - **Error Handling**: Comprehensive validation for ticker symbols and graceful error responses
 - **Logging**: Built-in logging configuration for debugging and monitoring
 
-## Robust Scheduling System (August 2025)
-- **Multi-Layer Protection**: Retry logic with exponential backoff (3 attempts per task)
-- **Emergency Execution**: Backup systems for missed trades and closures
-- **Health Monitoring**: 30-second continuous health checks with auto-recovery
-- **Backup Scheduling**: Secondary EOD closure verification at 3:39 PM EST
-- **Execution Tracking**: JSON status files and comprehensive execution history
-- **Failsafe Triggers**: Automatic emergency execution for missed critical tasks
-- **Process Monitoring**: Auto-restart capabilities with startup script management
+## Trading Scheduler System (August 2025 - Complete Refactor)
+- **Core Scheduler**: Clean, efficient trading_scheduler.py with reliable execution
+- **Daily Schedule**: 10:05 AM data update, 10:15 AM trades, 3:34 PM closure
+- **Position Monitoring**: 2-minute checks during market hours for profit/loss targets
+- **Exit Conditions**: +3% profit target, -0.8% stop loss, 3:34 PM EOD closure
+- **Auto-Restart**: Bash script monitors and restarts scheduler if it crashes
+- **System Verification**: Tools to verify all components before trading
+- **Status Monitoring**: Real-time status checking and portfolio overview
 
 ## Core Analytics Logic
 - **Volume Analysis**: Real-time ranking of 14 stocks by daily trading volume with performance metrics

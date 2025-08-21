@@ -243,6 +243,14 @@ class PaperTrader:
         finally:
             session.close()
     
+    def execute_morning_trades(self):
+        """Execute morning trades at 10:15 AM EST"""
+        return self.morning_trade_execution()
+    
+    def close_all_positions(self):
+        """Close all positions (wrapper for end_of_day_close)"""
+        return self.end_of_day_close()
+    
     def end_of_day_close(self):
         """Close all positions at end of trading day"""
         session = get_session()

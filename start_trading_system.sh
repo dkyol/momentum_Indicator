@@ -1,32 +1,48 @@
 #!/bin/bash
-"""
-Trading System Startup Script
-Starts the persistent scheduler that handles all scheduled trading operations.
-"""
 
-echo "=============================================="
+# Start Trading System
+# This script starts the trading scheduler and monitors its health
+
+echo "========================================"
 echo "STARTING AUTOMATED TRADING SYSTEM"
-echo "=============================================="
-echo "Schedule:"
-echo "• 10:05 AM EST - Market data updates"
-echo "• 10:15 AM EST - Execute momentum trades" 
-echo "• 3:34 PM EST - End-of-day position closure"
-echo "• 2-minute monitoring during market hours"
-echo "=============================================="
+echo "========================================"
+echo ""
 
-# Make sure we're in the right directory
-cd "$(dirname "$0")"
+# Function to check if process is running
+check_process() {
+    pgrep -f "$1" > /dev/null
+    return $?
+}
 
-# Start the persistent scheduler
-python3 start_trading_scheduler.py &
+# Kill any existing scheduler processes
+echo "Cleaning up existing processes..."
+pkill -f "trading_scheduler.py" 2>/dev/null
+pkill -f "robust_scheduler.py" 2>/dev/null
+sleep 2
 
-# Get the PID of the background process
+# Start the trading scheduler
+echo "Starting Trading Scheduler..."
+python3 trading_scheduler.py &
 SCHEDULER_PID=$!
 
-echo "Trading scheduler started with PID: $SCHEDULER_PID"
-echo "To stop: kill $SCHEDULER_PID"
-echo "Log file: persistent_scheduler.log"
-echo "=============================================="
+echo "Trading Scheduler started with PID: $SCHEDULER_PID"
+echo ""
 
-# Wait for the process to finish (or Ctrl+C)
-wait $SCHEDULER_PID
+# Monitor the scheduler
+echo "Monitoring system health..."
+echo "Press Ctrl+C to stop"
+echo ""
+
+while true; do
+    # Check if scheduler is still running
+    if ! kill -0 $SCHEDULER_PID 2>/dev/null; then
+        echo "WARNING: Trading Scheduler stopped unexpectedly!"
+        echo "Restarting..."
+        python3 trading_scheduler.py &
+        SCHEDULER_PID=$!
+        echo "Trading Scheduler restarted with PID: $SCHEDULER_PID"
+    fi
+    
+    # Sleep for 30 seconds before next check
+    sleep 30
+done
