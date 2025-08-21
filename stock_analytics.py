@@ -17,7 +17,7 @@ def get_high_volume_data():
         # Popular high-volume tickers to analyze
         high_volume_tickers = [
             'NVDA', 'AMD', 'TSLA', 'SPY', 'HOOD', 'AMZN', 'GOOGL', 'SMCI',
-            'CRDO', 'ASTS', 'IONQ', 'OPFI', 'RBRK', 'COIN'
+            'CRDO', 'ASTS', 'IONQ', 'OPFI', 'RBRK', 'COIN', 'EGO'
         ]
 
         # Get current date and calculate periods

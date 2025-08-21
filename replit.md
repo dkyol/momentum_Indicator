@@ -12,7 +12,7 @@ Preferred communication style: Simple, everyday language.
 - **Technology Stack**: Pure HTML, CSS, and vanilla JavaScript with Bootstrap for responsive UI
 - **Theme**: Dark theme implementation using Bootstrap's dark mode
 - **User Interface**: Clean dashboard-style single-page application focused on data visualization
-- **High Volume Stocks Table**: Live data table displaying 14 selected stocks ranked by daily volume with price and return metrics
+- **High Volume Stocks Table**: Live data table displaying 15 selected stocks ranked by daily volume with price and return metrics
 - **Momentum Analysis Table**: Technical indicators display with color-coded values and probability index progress bars
 - **Simple Moving Averages Table**: SMA 50/200 analysis with percentage comparisons and bullish/bearish indicators
 - **Paper Trading Portfolio**: Automated trading simulation with $10,000 initial investment tracking real-time performance
