@@ -54,5 +54,5 @@ while true; do
     echo "$(date): System running normally - Watchdog PID: $WATCHDOG_PID"
     
     # Sleep for 5 minutes
-    sleep 300
+    sleep 43,2
 done
