@@ -48,7 +48,7 @@ Preferred communication style: Simple, everyday language.
 - **Scheduled Updates**: Daily market data refresh at 10:05 AM EST (Monday-Friday) during market hours using automated scheduler
 - **Cache Management**: JSON-based caching system with freshness validation and automatic fallback to live data
 - **Technical Analysis**: Comprehensive technical indicator calculations with color-coded visual representations
-- **Paper Trading Execution**: Automated daily stock purchases of top 2 momentum stocks (10% allocation each) at 10:15 AM EST
+- **Paper Trading Execution**: Automated daily stock purchases of top 2 momentum stocks (40% allocation each) at 10:15 AM EST
 - **Real-time Monitoring**: 2-minute price checks during trading hours with automatic exit conditions
 - **Risk Management**: Systematic exits at +3% profit target, -0.8% stop loss, or 3:34 PM EST end-of-day close
 - **Portfolio Tracking**: Real-time portfolio value updates with position-level P&L calculations and trade history

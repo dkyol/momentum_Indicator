@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class PaperTrader:
     def __init__(self):
         self.initial_investment = 10000.0
-        self.trade_percentage = 0.1  # 10% per trade
+        self.trade_percentage = 0.4  # 40% per trade
         self.profit_target = 0.03  # 3% profit target
         self.stop_loss = 0.008  # 0.8% stop loss
         self.est_tz = pytz.timezone('US/Eastern')
@@ -91,7 +91,7 @@ class PaperTrader:
             return []
     
     def execute_buy_order(self, symbol, price):
-        """Execute a buy order for 10% of portfolio value"""
+        """Execute a buy order for 40% of portfolio value"""
         session = get_session()
         try:
             portfolio = session.query(Portfolio).first()
