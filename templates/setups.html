@@ -35,13 +35,13 @@
                     <td><small class="text-muted">{{ r.Sector or '—' }}</small></td>
                     <td>${{ r.Close }}</td>
                     <td>
-                        <span class="{% if r.RSI_14 < 30 %}text-success{% elif r.RSI_14 > 70 %}text-danger{% else %}text-warning{% endif %}">
-                            {{ r.RSI_14 }}
+                        <span class="{% if r.RSI_14 is none %}text-muted{% elif r.RSI_14 < 30 %}text-success{% elif r.RSI_14 > 70 %}text-danger{% else %}text-warning{% endif %}">
+                            {{ r.RSI_14 if r.RSI_14 is not none else '—' }}
                         </span>
                     </td>
                     <td>
-                        <span class="{% if r.Pct_From_52w_High > -2 %}text-success{% elif r.Pct_From_52w_High < -20 %}text-danger{% else %}text-warning{% endif %}">
-                            {{ r.Pct_From_52w_High }}%
+                        <span class="{% if r.Pct_From_52w_High is none %}text-muted{% elif r.Pct_From_52w_High > -2 %}text-success{% elif r.Pct_From_52w_High < -20 %}text-danger{% else %}text-warning{% endif %}">
+                            {% if r.Pct_From_52w_High is not none %}{{ r.Pct_From_52w_High }}%{% else %}—{% endif %}
                         </span>
                     </td>
                     <td>
