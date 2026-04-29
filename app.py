@@ -304,7 +304,10 @@ def refresh_alpha():
     page load.  ``include_backtest`` is opt-in because the backtester
     is the slowest step.
     """
-    include_backtest = request.form.get("include_backtest") == "1"
+    include_backtest = (
+        request.form.get("include_backtest") == "1"
+        or request.args.get("include_backtest") == "1"
+    )
 
     def _run():
         try:
