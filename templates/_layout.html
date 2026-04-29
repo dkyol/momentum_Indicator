@@ -63,9 +63,25 @@
                     </li>
                 </ul>
                 <div class="d-flex align-items-center gap-2">
-                    <button id="refreshAlphaBtn" class="btn btn-sm btn-outline-primary" type="button">
-                        <i class="fas fa-sync-alt me-1"></i>Refresh alpha
-                    </button>
+                    <div class="btn-group btn-group-sm">
+                        <button id="refreshAlphaBtn" class="btn btn-outline-primary" type="button"
+                                data-include-backtest="0"
+                                title="Refresh fundamentals, value, RS, setups, regime, catalysts, and edge score (~2 min)">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh alpha
+                        </button>
+                        <button type="button" class="btn btn-outline-primary dropdown-toggle dropdown-toggle-split"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="visually-hidden">Refresh options</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item js-refresh-option" href="#" data-include-backtest="0">
+                                <i class="fas fa-bolt me-2 text-warning"></i>Refresh alpha (fast, ~2 min)
+                            </a></li>
+                            <li><a class="dropdown-item js-refresh-option" href="#" data-include-backtest="1">
+                                <i class="fas fa-history me-2 text-info"></i>Refresh alpha + backtest (~3 min)
+                            </a></li>
+                        </ul>
+                    </div>
                     <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-secondary">
                         <i class="fas fa-sign-out-alt"></i>
                     </a>
@@ -117,24 +133,44 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Refresh-alpha button: kicks off a server-side background job.
+        // The split-button dropdown lets the user choose whether to include
+        // the slow backtest pass; clicks on the main button reuse whatever
+        // mode was last picked from the dropdown (default = fast).
         const btn = document.getElementById('refreshAlphaBtn');
         const status = document.getElementById('refreshStatus');
+
+        async function triggerRefresh(includeBacktest) {
+            if (!btn) return;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing…';
+            const mode = includeBacktest ? ' (with backtest)' : '';
+            if (status) status.textContent = 'Alpha refresh started' + mode + '. Reload pages in a few minutes.';
+            try {
+                const url = '{{ url_for("refresh_alpha") }}' + (includeBacktest ? '?include_backtest=1' : '');
+                await fetch(url, {method: 'POST'});
+            } catch (e) {
+                if (status) status.textContent = 'Failed to start refresh: ' + e;
+            }
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>Refresh alpha';
+            }, 3000);
+        }
+
         if (btn) {
-            btn.addEventListener('click', async () => {
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing…';
-                if (status) status.textContent = 'Alpha refresh started in the background. Reload pages in a few minutes.';
-                try {
-                    await fetch('{{ url_for("refresh_alpha") }}', {method: 'POST'});
-                } catch (e) {
-                    if (status) status.textContent = 'Failed to start refresh: ' + e;
-                }
-                setTimeout(() => {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>Refresh alpha';
-                }, 3000);
+            btn.addEventListener('click', () => {
+                const includeBacktest = btn.dataset.includeBacktest === '1';
+                triggerRefresh(includeBacktest);
             });
         }
+        document.querySelectorAll('.js-refresh-option').forEach(item => {
+            item.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                const includeBacktest = item.dataset.includeBacktest === '1';
+                if (btn) btn.dataset.includeBacktest = item.dataset.includeBacktest;
+                triggerRefresh(includeBacktest);
+            });
+        });
         // Enable Bootstrap tooltips wherever data-bs-toggle="tooltip" appears.
         document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
     </script>

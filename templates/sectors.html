@@ -82,8 +82,14 @@
                     <th>1m</th><th>3m</th><th>6m</th><th>12m</th>
                     <th data-bs-toggle="tooltip" title="3-month excess return vs SPY">vs SPY 3m</th>
                     <th data-bs-toggle="tooltip" title="3-month excess return vs sector ETF">vs Sector 3m</th>
-                    <th data-bs-toggle="tooltip" title="Universe percentile rank of 3m excess return vs SPY (100 = best)">SPY %ile</th>
-                    <th data-bs-toggle="tooltip" title="Within-sector percentile rank of 3m excess return vs sector ETF (100 = best in sector)">Sector %ile</th>
+                    <th data-bs-toggle="tooltip" title="Universe percentile rank of 1m excess return vs SPY (100 = best)">SPY %ile 1m</th>
+                    <th data-bs-toggle="tooltip" title="Universe percentile rank of 3m excess return vs SPY (100 = best)">SPY %ile 3m</th>
+                    <th data-bs-toggle="tooltip" title="Universe percentile rank of 6m excess return vs SPY (100 = best)">SPY %ile 6m</th>
+                    <th data-bs-toggle="tooltip" title="Universe percentile rank of 12m excess return vs SPY (100 = best)">SPY %ile 12m</th>
+                    <th data-bs-toggle="tooltip" title="Within-sector percentile rank of 1m excess return vs sector ETF">Sector %ile 1m</th>
+                    <th data-bs-toggle="tooltip" title="Within-sector percentile rank of 3m excess return vs sector ETF">Sector %ile 3m</th>
+                    <th data-bs-toggle="tooltip" title="Within-sector percentile rank of 6m excess return vs sector ETF">Sector %ile 6m</th>
+                    <th data-bs-toggle="tooltip" title="Within-sector percentile rank of 12m excess return vs sector ETF">Sector %ile 12m</th>
                 </tr>
             </thead>
             <tbody>
@@ -121,20 +127,24 @@
                         </span>
                         {% else %}<span class="text-muted">—</span>{% endif %}
                     </td>
+                    {% for key in ['ret_1m_pct_vs_market','ret_3m_pct_vs_market','ret_6m_pct_vs_market','ret_12m_pct_vs_market'] %}
                     <td>
-                        {% if r.ret_3m_pct_vs_market is not none %}
-                        <span class="badge {% if r.ret_3m_pct_vs_market >= 80 %}bg-success{% elif r.ret_3m_pct_vs_market >= 50 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
-                            {{ r.ret_3m_pct_vs_market }}
+                        {% if r[key] is not none %}
+                        <span class="badge {% if r[key] >= 80 %}bg-success{% elif r[key] >= 50 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                            {{ r[key] }}
                         </span>
                         {% else %}<span class="text-muted">—</span>{% endif %}
                     </td>
+                    {% endfor %}
+                    {% for key in ['ret_1m_pct_vs_sector','ret_3m_pct_vs_sector','ret_6m_pct_vs_sector','ret_12m_pct_vs_sector'] %}
                     <td>
-                        {% if r.ret_3m_pct_vs_sector is not none %}
-                        <span class="badge {% if r.ret_3m_pct_vs_sector >= 80 %}bg-success{% elif r.ret_3m_pct_vs_sector >= 50 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
-                            {{ r.ret_3m_pct_vs_sector }}
+                        {% if r[key] is not none %}
+                        <span class="badge {% if r[key] >= 80 %}bg-success{% elif r[key] >= 50 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                            {{ r[key] }}
                         </span>
                         {% else %}<span class="text-muted">—</span>{% endif %}
                     </td>
+                    {% endfor %}
                 </tr>
                 {% endfor %}
             </tbody>
