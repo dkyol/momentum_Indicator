@@ -82,6 +82,8 @@
                     <th>1m</th><th>3m</th><th>6m</th><th>12m</th>
                     <th data-bs-toggle="tooltip" title="3-month excess return vs SPY">vs SPY 3m</th>
                     <th data-bs-toggle="tooltip" title="3-month excess return vs sector ETF">vs Sector 3m</th>
+                    <th data-bs-toggle="tooltip" title="Universe percentile rank of 3m excess return vs SPY (100 = best)">SPY %ile</th>
+                    <th data-bs-toggle="tooltip" title="Within-sector percentile rank of 3m excess return vs sector ETF (100 = best in sector)">Sector %ile</th>
                 </tr>
             </thead>
             <tbody>
@@ -116,6 +118,20 @@
                         {% if r.ret_3m_vs_sector is not none %}
                         <span class="{% if r.ret_3m_vs_sector >= 0 %}text-success{% else %}text-danger{% endif %}">
                             {{ '+' if r.ret_3m_vs_sector >= 0 else '' }}{{ r.ret_3m_vs_sector }}%
+                        </span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if r.ret_3m_pct_vs_market is not none %}
+                        <span class="badge {% if r.ret_3m_pct_vs_market >= 80 %}bg-success{% elif r.ret_3m_pct_vs_market >= 50 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                            {{ r.ret_3m_pct_vs_market }}
+                        </span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if r.ret_3m_pct_vs_sector is not none %}
+                        <span class="badge {% if r.ret_3m_pct_vs_sector >= 80 %}bg-success{% elif r.ret_3m_pct_vs_sector >= 50 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                            {{ r.ret_3m_pct_vs_sector }}
                         </span>
                         {% else %}<span class="text-muted">—</span>{% endif %}
                     </td>

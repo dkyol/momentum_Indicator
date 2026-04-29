@@ -4,13 +4,28 @@ Signal backtester & performance report.
 Replays each individual signal across the universe over the last 3 years
 on daily bars and reports:
 
-    * trades       – number of (signal-day, exit-day) pairs evaluated
-    * hit_rate     – % of trades that finished positive
-    * avg_return   – mean per-trade return (%)
+    * trades         – number of (signal-day, exit-day) pairs evaluated
+    * hit_rate       – % of trades that finished positive
+    * avg_return     – mean per-trade return (%)
     * median_return
     * max_return
     * min_return
-    * holding_days – fixed holding period used (10)
+    * max_drawdown   – worst peak-to-trough decline of the chained equity
+                       curve when every trade is taken sequentially
+                       (sized 1× capital each)
+    * holding_days   – fixed holding period used (10)
+
+Signal families covered:
+
+    * Setup signals (5): trend_pullback, high_52w_breakout, volume_thrust,
+      golden_cross, bullish_rsi_divergence – definitions match setups.py.
+    * Value-only proxy: stock trades > 30 % below its 52-week high while
+      still above its 200-dma (a price-based stand-in because we don't
+      have point-in-time fundamentals on free yfinance).
+    * RS-only: trailing 12-month return is in the top quintile of the
+      universe on that day (rolling cross-sectional rank).
+    * Full Edge Score proxy: value_only AND rs_only AND any setup fires
+      on the same day – the closest we can replay the live composite.
 
 We use a simple, deterministic backtest:
     - On day T, if the signal is true on the close, "buy" at the next
@@ -52,11 +67,21 @@ def _rsi(closes: pd.Series, period: int = 14) -> pd.Series:
     return 100 - (100 / (1 + rs))
 
 
-def _signal_series(df: pd.DataFrame) -> dict[str, pd.Series]:
+def _signal_series(
+    df: pd.DataFrame,
+    rs_top_quintile: pd.Series | None = None,
+) -> dict[str, pd.Series]:
     """Compute a boolean Series for each named signal across the full bar history.
 
-    The definitions here MUST match ``setups.py`` so that the backtest
-    measures the edge of the same patterns the dashboard surfaces.
+    The setup definitions here MUST match ``setups.py`` so that the
+    backtest measures the edge of the same patterns the dashboard
+    surfaces.
+
+    ``rs_top_quintile`` is an optional pre-computed boolean Series
+    (indexed like ``df``) marking days when this ticker's trailing
+    12-month return ranks in the top 20 % of the universe.  It is
+    computed cross-sectionally by ``run_backtest`` and threaded in here
+    so the per-ticker function stays simple.
     """
     closes = df["Close"].dropna()
     volumes = df["Volume"].reindex(closes.index).fillna(0) if "Volume" in df else pd.Series(0, index=closes.index)
@@ -108,25 +133,95 @@ def _signal_series(df: pd.DataFrame) -> dict[str, pd.Series]:
         (close_second_low < close_first_low) & (rsi_second_low > rsi_first_low)
     ).fillna(False)
 
+    # ---------- Composite "value-only" proxy ----------
+    # We don't have point-in-time fundamentals on free yfinance, so we
+    # use a price-based stand-in: trading deeply below the 52-week high
+    # (a typical "value pullback") while remaining in a long-term uptrend
+    # (above the 200-day SMA) – i.e. a battered name with intact trend.
+    value_only = (
+        (closes < high_52w * 0.7)
+        & (closes > sma_200)
+        & high_52w.notna()
+        & sma_200.notna()
+    ).fillna(False)
+
+    # ---------- "RS-only" proxy ----------
+    # Cross-sectional top-quintile flag is computed in run_backtest and
+    # passed in via ``rs_top_quintile``.  When called for a single ticker
+    # in isolation we fall back to an all-False series so the signal
+    # contributes zero trades.
+    if rs_top_quintile is None:
+        rs_only = pd.Series(False, index=closes.index)
+    else:
+        rs_only = rs_top_quintile.reindex(closes.index).fillna(False).astype(bool)
+
+    # ---------- Full "Edge Score" proxy ----------
+    # The live Edge Score blends value, RS, setups and catalysts.  We
+    # can't reconstruct catalysts historically, so the best replay we
+    # can offer is the AND of the three replayable components: value
+    # proxy + RS top quintile + at least one setup firing.
+    any_setup = (
+        trend_pullback | high_52w_breakout | volume_thrust
+        | golden_cross | bullish_rsi_divergence
+    )
+    edge_score_proxy = (value_only & rs_only & any_setup).fillna(False)
+
     return {
         "trend_pullback": trend_pullback,
         "high_52w_breakout": high_52w_breakout,
         "volume_thrust": volume_thrust,
         "golden_cross": golden_cross,
         "bullish_rsi_divergence": bullish_rsi_divergence,
+        "value_only": value_only,
+        "rs_only": rs_only,
+        "edge_score_proxy": edge_score_proxy,
     }
 
 
+def _max_drawdown_pct(returns: list[float]) -> float | None:
+    """Worst peak-to-trough decline of the cumulative-PnL curve.
+
+    Returns are treated as additive PnL of equally-sized trades (each
+    trade risks a fixed unit of capital).  This is the standard signal-
+    analysis drawdown – it stays bounded and interpretable even when a
+    high-volume signal generates tens of thousands of trades, unlike a
+    fully-compounded equity curve which would blow up to -100%.
+
+    The result is in percentage points of cumulative return, e.g. -25
+    means "your running PnL gave back 25 percentage points from its
+    high-water mark before recovering".
+    """
+    if not returns:
+        return None
+    equity = 0.0
+    peak = 0.0
+    worst = 0.0
+    for r in returns:
+        equity += r
+        if equity > peak:
+            peak = equity
+        dd = equity - peak
+        if dd < worst:
+            worst = dd
+    return round(worst, 2)
+
+
 def _backtest_one_signal(
-    bars: dict[str, pd.DataFrame], signal_name: str
+    bars: dict[str, pd.DataFrame],
+    signal_name: str,
+    rs_quintile_map: dict[str, pd.Series] | None = None,
 ) -> dict:
     returns: list[float] = []
+    # Sort tickers' trades chronologically so the equity curve / drawdown
+    # reflect realistic capital deployment.
+    dated_returns: list[tuple[pd.Timestamp, float]] = []
 
     for ticker, df in bars.items():
         if df is None or "Close" not in df or len(df) < 260:
             continue
         try:
-            sig = _signal_series(df).get(signal_name)
+            rs_flag = (rs_quintile_map or {}).get(ticker)
+            sig = _signal_series(df, rs_top_quintile=rs_flag).get(signal_name)
             if sig is None:
                 continue
         except Exception:
@@ -148,7 +243,9 @@ def _backtest_one_signal(
                 exitp = float(closes.iloc[exit_pos])
                 if entry <= 0:
                     continue
-                returns.append((exitp / entry - 1.0) * 100.0)
+                ret = (exitp / entry - 1.0) * 100.0
+                returns.append(ret)
+                dated_returns.append((idx[entry_pos], ret))
             except Exception:
                 continue
 
@@ -161,7 +258,11 @@ def _backtest_one_signal(
             "median_return": None,
             "max_return": None,
             "min_return": None,
+            "max_drawdown": None,
         }
+
+    dated_returns.sort(key=lambda x: x[0])
+    chronological_returns = [r for _, r in dated_returns]
 
     return {
         "signal": signal_name,
@@ -171,7 +272,39 @@ def _backtest_one_signal(
         "median_return": round(median(returns), 2),
         "max_return": round(max(returns), 2),
         "min_return": round(min(returns), 2),
+        "max_drawdown": _max_drawdown_pct(chronological_returns),
     }
+
+
+def _build_rs_quintile_map(
+    bars: dict[str, pd.DataFrame], lookback: int = 252
+) -> dict[str, pd.Series]:
+    """For each ticker, return a daily boolean Series marking days when its
+    trailing 12-month return is in the top quintile of the universe.
+
+    This is the historical analogue of the live RS_Rating threshold used
+    by the Edge Score and is necessary to backtest the RS-only and full
+    Edge Score signals.
+    """
+    rolling_returns: dict[str, pd.Series] = {}
+    for ticker, df in bars.items():
+        if df is None or "Close" not in df:
+            continue
+        closes = df["Close"].dropna()
+        if len(closes) <= lookback:
+            continue
+        rolling_returns[ticker] = closes.pct_change(lookback)
+
+    if not rolling_returns:
+        return {}
+
+    panel = pd.DataFrame(rolling_returns)
+    # Cross-sectional 80th percentile threshold per day; True = top 20%.
+    threshold = panel.quantile(0.80, axis=1)
+    flags: dict[str, pd.Series] = {}
+    for ticker in panel.columns:
+        flags[ticker] = (panel[ticker] >= threshold).fillna(False)
+    return flags
 
 
 def run_backtest() -> dict:
@@ -181,14 +314,22 @@ def run_backtest() -> dict:
     if not bars:
         return {"results": [], "holding_days": HOLDING_DAYS}
 
+    rs_quintile_map = _build_rs_quintile_map(bars)
+
     signals = [
         "trend_pullback",
         "high_52w_breakout",
         "volume_thrust",
         "golden_cross",
         "bullish_rsi_divergence",
+        "value_only",
+        "rs_only",
+        "edge_score_proxy",
     ]
-    results = [_backtest_one_signal(bars, name) for name in signals]
+    results = [
+        _backtest_one_signal(bars, name, rs_quintile_map=rs_quintile_map)
+        for name in signals
+    ]
     return {
         "results": results,
         "holding_days": HOLDING_DAYS,

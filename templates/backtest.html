@@ -30,6 +30,7 @@
                     <th>Median Return</th>
                     <th>Best</th>
                     <th>Worst</th>
+                    <th data-bs-toggle="tooltip" title="Worst peak-to-trough decline of the cumulative-PnL curve, treating each trade as a fixed-size unit bet (in percentage points)">Max Drawdown</th>
                 </tr>
             </thead>
             <tbody>
@@ -61,6 +62,9 @@
                     </td>
                     <td class="text-danger">
                         {% if r.min_return is not none %}{{ r.min_return }}%{% else %}—{% endif %}
+                    </td>
+                    <td class="text-danger">
+                        {% if r.max_drawdown is not none %}{{ r.max_drawdown }} pp{% else %}—{% endif %}
                     </td>
                 </tr>
                 {% endfor %}

@@ -6,15 +6,15 @@ Stock Market Analytics is a Flask-based web application that combines a real-tim
 
 A second analytics layer focused on idea discovery rather than monitoring:
 
-* **Universe** (`universe.py`) – curated S&P 100-style list with GICS sector tags + Sector SPDR ETF map.
+* **Universe** (`universe.py`) – ~280 liquid US large-caps at S&P 500 scale, tagged with GICS sectors and mapped to Sector SPDR ETFs.  The list is configurable: drop a `universe.json` file at the project root (`[{"symbol": "AAPL", "sector": "Information Technology"}, ...]`) and it overrides the bundled defaults at startup.
 * **Fundamentals snapshot** (`fundamentals.py`) – nightly yfinance `.info` pull, cached as `cached_fundamentals.json`.
 * **Value & quality screen** (`value_screener.py`) – sector-relative cheapness percentile (P/E, P/B, P/S, EV/EBITDA, FCF yield) gated by a quality filter (positive FCF, D/E < 200, non-shrinking revenue).
-* **Relative strength** (`relative_strength.py`) – 1m/3m/6m/12m return percentiles vs SPY and vs sector ETFs, IBD-style 1-99 RS Rating, sector rotation table.
+* **Relative strength** (`relative_strength.py`) – 1m/3m/6m/12m raw returns and excess returns vs SPY & vs sector ETFs, plus **percentile-rank** columns for each (universe rank for vs-SPY, within-sector rank for vs-sector), IBD-style 1-99 RS Rating, and a sector-rotation table.
 * **Technical setups** (`setups.py`) – trend pullback, 52-week breakout, volume thrust, golden cross, bullish RSI divergence.
 * **Market regime** (`market_regime.py`) – SPY-vs-200d / VIX / breadth → risk_on / neutral / risk_off classifier; the paper trader skips new entries when risk_off.
 * **Catalysts** (`catalysts.py`) – upcoming earnings, 90-day insider transactions, short-interest snapshot.
 * **Composite Edge Score** (`edge_score.py`) – weighted blend (Value 30%, RS 30%, Setups 25%, Catalysts 15%) with reason strings; quality-failing stocks demoted.
-* **Signal backtester** (`backtester.py`) – 3-year holding-period replay (10 trading-day hold) of each setup with hit rate, average return, best/worst.
+* **Signal backtester** (`backtester.py`) – 3-year holding-period replay (10 trading-day hold) of **eight** signals: the 5 setups, a price-based value_only proxy (>30% below 52w high while above 200dma), an rs_only proxy (top-quintile 12m return cross-sectionally), and a full edge_score_proxy (value AND rs AND any setup).  Reports trades, hit rate, mean / median / best / worst return, and **max drawdown** (additive cumulative-PnL drawdown in percentage points).
 * **Orchestrator** (`alpha_engine.py`) – `refresh_alpha_data(include_backtest=False)`; bootstrapped in a background thread on first app start, refreshed nightly via `scheduler.py`, and triggerable from the navbar "Refresh alpha" button.
 * **Routes**: `/opportunities`, `/value`, `/setups`, `/sectors`, `/catalysts`, `/backtest` (all wrapped by `templates/_layout.html` with a regime banner).
 * **Cache files**: `cached_fundamentals.json`, `cached_value_screen.json`, `cached_relative_strength.json`, `cached_setups.json`, `cached_market_regime.json`, `cached_catalysts.json`, `cached_edge_score.json`, `cached_backtest.json`, `cached_alpha_meta.json` (last-refreshed timestamps).

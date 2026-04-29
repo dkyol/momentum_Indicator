@@ -120,29 +120,60 @@ def compute_relative_strength() -> dict:
     # 3) Universe distributions for percentile ranks.
     universe_dists = {label: [r.get(label) for r in rows] for label in HORIZONS}
 
-    for row in rows:
-        # vs SPY (excess return)
-        for label in HORIZONS:
-            v = row.get(label)
-            m = market_rets.get(label)
-            row[f"{label}_vs_market"] = (
-                round(v - m, 2) if (v is not None and m is not None) else None
-            )
+    # Pre-compute distributions of vs-market and vs-sector excess returns
+    # across the universe so we can convert each stock's excess return
+    # into a percentile rank rather than just a raw spread.
+    excess_market_dists: dict[str, list[float]] = {label: [] for label in HORIZONS}
+    excess_sector_dists: dict[str, dict[str, list[float]]] = {
+        label: {sector: [] for sector in SECTOR_ETFS} for label in HORIZONS
+    }
 
-        # vs sector ETF (excess return)
+    for row in rows:
         sec_rets = sector_rets.get(row.get("Sector") or "", {})
         for label in HORIZONS:
             v = row.get(label)
+            m = market_rets.get(label)
             s = sec_rets.get(label)
-            row[f"{label}_vs_sector"] = (
-                round(v - s, 2) if (v is not None and s is not None) else None
+            if v is not None and m is not None:
+                excess_market_dists[label].append(v - m)
+            sector = row.get("Sector")
+            if v is not None and s is not None and sector in excess_sector_dists[label]:
+                excess_sector_dists[label][sector].append(v - s)
+
+    for row in rows:
+        sec_rets = sector_rets.get(row.get("Sector") or "", {})
+        sector = row.get("Sector")
+
+        for label in HORIZONS:
+            v = row.get(label)
+            m = market_rets.get(label)
+            s = sec_rets.get(label)
+
+            # Excess returns – kept for transparency.
+            ex_mkt = (v - m) if (v is not None and m is not None) else None
+            ex_sec = (v - s) if (v is not None and s is not None) else None
+            row[f"{label}_vs_market"] = round(ex_mkt, 2) if ex_mkt is not None else None
+            row[f"{label}_vs_sector"] = round(ex_sec, 2) if ex_sec is not None else None
+
+            # Percentile rank of the excess return within the universe –
+            # this is the headline IBD-style "vs SPY" / "vs sector" rank.
+            row[f"{label}_pct_vs_market"] = (
+                round(p, 1)
+                if (p := _percentile(ex_mkt, excess_market_dists[label])) is not None
+                else None
+            )
+            sector_dist = excess_sector_dists[label].get(sector or "", [])
+            row[f"{label}_pct_vs_sector"] = (
+                round(p, 1)
+                if (p := _percentile(ex_sec, sector_dist)) is not None
+                else None
             )
 
-        # Universe percentile rank for each horizon.
-        for label in HORIZONS:
+            # Universe percentile rank of the raw return – preserved for
+            # backwards compatibility / RS rating blend.
             row[f"{label}_pct"] = (
                 round(p, 1)
-                if (p := _percentile(row.get(label), universe_dists[label])) is not None
+                if (p := _percentile(v, universe_dists[label])) is not None
                 else None
             )
 
