@@ -327,6 +327,11 @@ class PaperTrader:
                     return False
 
             # Stand down on risk-off days (per market regime panel).
+            # Fail-CLOSED: if the regime cache is unreadable for any
+            # reason we refuse to open new positions rather than
+            # default to "risk-on".  A stale or missing regime read
+            # is treated the same as risk-off: the safer side for a
+            # capital-allocation decision.
             try:
                 from market_regime import get_cached_market_regime, is_risk_on
                 regime = get_cached_market_regime().get("regime")
@@ -338,9 +343,11 @@ class PaperTrader:
                     return False
             except Exception as e:
                 self.log_message(
-                    f"Regime check unavailable, proceeding with trades: {e}",
+                    f"Trade execution skipped: regime check unavailable "
+                    f"(failing closed for safety): {e}",
                     "WARNING",
                 )
+                return False
 
             self.log_message("Starting morning trade execution", "INFO")
             
