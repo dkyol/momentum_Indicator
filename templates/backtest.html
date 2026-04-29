@@ -25,7 +25,8 @@
                 <tr>
                     <th>Signal</th>
                     <th>Trades</th>
-                    <th>Hit Rate</th>
+                    <th data-bs-toggle="tooltip" title="Fixed holding period, identical for every trade and every signal">Hold (days)</th>
+                    <th data-bs-toggle="tooltip" title="Share of trades that closed positive at the fixed-hold exit">Hit Rate</th>
                     <th>Avg Return</th>
                     <th>Median Return</th>
                     <th>Best</th>
@@ -38,6 +39,7 @@
                 <tr>
                     <td><strong>{{ r.signal.replace('_',' ') }}</strong></td>
                     <td>{{ r.trades }}</td>
+                    <td class="text-muted">{{ r.holding_days or holding_days }}</td>
                     <td>
                         {% if r.hit_rate is not none %}
                         <span class="{% if r.hit_rate >= 55 %}text-success{% elif r.hit_rate >= 45 %}text-warning{% else %}text-danger{% endif %}">

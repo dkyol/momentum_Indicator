@@ -155,28 +155,42 @@ def run_scheduler():
     """
     logger.info("Starting market data scheduler...")
     
-    # Schedule daily update at 10:05 AM EST (15:05 UTC during EST)
-    schedule.every().monday.at("15:05").do(save_market_data)
-    schedule.every().tuesday.at("15:05").do(save_market_data)
-    schedule.every().wednesday.at("15:05").do(save_market_data)
-    schedule.every().thursday.at("15:05").do(save_market_data)
-    schedule.every().friday.at("15:05").do(save_market_data)
+    # NOTE: schedule.py runs in the host process's local time, but we want
+    # deterministic UTC-anchored slots so the jobs fire at the same wall-clock
+    # moment regardless of where the container is hosted.  All times below
+    # are absolute UTC.  In US/Eastern this lands at:
+    #   * 15:05 UTC  -> 10:05 EST / 11:05 EDT  (post-open daily refresh)
+    #   * 03:30 UTC  -> 22:30 EST / 23:30 EDT  (nightly alpha + backtest,
+    #                                           after US market close)
+    # The DST drift is intentional: anchoring to UTC keeps the schedule
+    # stable, only the EST/EDT wall-clock label shifts twice a year.
+    UTC_DAILY_REFRESH = "15:05"
+    UTC_NIGHTLY_ALPHA = "03:30"
 
-    # Schedule nightly alpha-engine refresh at 10:30 PM EST (after market
-    # close, after fundamentals settle).  Includes the slow backtest step.
-    schedule.every().monday.at("03:30").do(refresh_alpha_with_backtest)
-    schedule.every().tuesday.at("03:30").do(refresh_alpha_with_backtest)
-    schedule.every().wednesday.at("03:30").do(refresh_alpha_with_backtest)
-    schedule.every().thursday.at("03:30").do(refresh_alpha_with_backtest)
-    schedule.every().friday.at("03:30").do(refresh_alpha_with_backtest)
-    schedule.every().saturday.at("03:30").do(refresh_alpha_with_backtest)
-    
+    schedule.every().monday.at(UTC_DAILY_REFRESH).do(save_market_data)
+    schedule.every().tuesday.at(UTC_DAILY_REFRESH).do(save_market_data)
+    schedule.every().wednesday.at(UTC_DAILY_REFRESH).do(save_market_data)
+    schedule.every().thursday.at(UTC_DAILY_REFRESH).do(save_market_data)
+    schedule.every().friday.at(UTC_DAILY_REFRESH).do(save_market_data)
+
+    schedule.every().monday.at(UTC_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
+    schedule.every().tuesday.at(UTC_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
+    schedule.every().wednesday.at(UTC_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
+    schedule.every().thursday.at(UTC_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
+    schedule.every().friday.at(UTC_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
+    schedule.every().saturday.at(UTC_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
+
     # Run initial update if no fresh data exists
     if not is_data_fresh():
         logger.info("No fresh data found, running initial update...")
         save_market_data()
-    
-    logger.info("Scheduler configured. Market data will update daily at 10:05 AM EST (Monday-Friday)")
+
+    logger.info(
+        "Scheduler configured.  Daily market refresh at %s UTC (Mon-Fri); "
+        "nightly alpha-engine + backtest at %s UTC (Mon-Sat).",
+        UTC_DAILY_REFRESH,
+        UTC_NIGHTLY_ALPHA,
+    )
     
     while True:
         schedule.run_pending()
