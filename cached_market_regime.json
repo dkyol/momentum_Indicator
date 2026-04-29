@@ -1,1 +1,1 @@
-{"as_of": "2026-04-29T00:03:09.085148-04:00", "regime": "neutral", "spy_close": 711.69, "spy_sma_50": 677.42, "spy_sma_200": 666.46, "spy_pct_vs_200": 6.79, "spy_above_200": true, "vix": 17.83, "breadth_pct": 54.7, "breadth_above": 150, "breadth_total": 274}
+{"as_of": "2026-04-29T00:11:36.227651-04:00", "regime": "risk_off", "spy_close": null, "spy_sma_50": null, "spy_sma_200": null, "spy_pct_vs_200": null, "spy_above_200": false, "vix": null, "breadth_pct": 57.1, "breadth_above": 12, "breadth_total": 21}

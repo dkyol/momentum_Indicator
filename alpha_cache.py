@@ -50,16 +50,43 @@ CACHE_BACKTEST = "cached_backtest.json"
 CACHE_ALPHA_META = "cached_alpha_meta.json"  # last-update info
 
 
+def _sanitize_for_json(obj: Any) -> Any:
+    """Recursively replace pandas/numpy NaN with None so cached JSON is
+    free of ``NaN`` literals.
+
+    ``pd.DataFrame.where(pd.notna, None)`` is unreliable on float-dtype
+    columns – pandas casts ``None`` back to ``NaN`` to preserve the
+    column dtype.  Converting through ``json.dump`` then yields the
+    non-standard ``NaN`` literal (which our own consumers tolerate, but
+    which sorts inconsistently and renders as the string "NaN" in
+    Jinja).  We do the scrub here so every alpha cache benefits without
+    touching individual modules.
+    """
+    import math
+    if obj is None:
+        return None
+    if isinstance(obj, float):
+        return None if math.isnan(obj) or math.isinf(obj) else obj
+    if isinstance(obj, dict):
+        return {k: _sanitize_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_sanitize_for_json(v) for v in obj]
+    return obj
+
+
 def save_json(path: str, data: Any) -> None:
     """Atomically write any JSON-serialisable object to disk.
 
     Writes to ``path + ".tmp"`` then ``os.replace``s it onto the final
-    path so concurrent readers always see a complete file.
+    path so concurrent readers always see a complete file.  NaN/Inf
+    floats are scrubbed to ``None`` first so caches contain only valid
+    JSON and downstream sorting / templating stays well-behaved.
     """
     tmp_path = f"{path}.tmp"
     try:
+        sanitized = _sanitize_for_json(data)
         with open(tmp_path, "w") as f:
-            json.dump(data, f, default=str)
+            json.dump(sanitized, f, default=str, allow_nan=False)
         os.replace(tmp_path, path)
     except Exception as e:
         logger.error(f"Failed to write cache {path}: {e}")
