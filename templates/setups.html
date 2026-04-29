@@ -1,0 +1,72 @@
+{% extends "_layout.html" %}
+{% block title %}Bullish Setups{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <h2 class="mb-0"><i class="fas fa-bolt me-2 text-warning"></i>Bullish Technical Setups</h2>
+    <small class="text-muted ms-auto">
+        {% if meta and meta.setups %}Last refresh: {{ meta.setups[:19].replace('T',' ') }}{% endif %}
+    </small>
+</div>
+
+<p class="text-muted mb-4">
+    Daily-bar pattern detector. Five concrete setups per stock: trend pullback, 52-week breakout,
+    volume thrust, golden cross, and bullish RSI divergence. Stocks with no active setup are hidden.
+</p>
+
+{% if rows %}
+<div class="card shadow-lg">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Symbol</th>
+                    <th>Sector</th>
+                    <th>Close</th>
+                    <th>RSI(14)</th>
+                    <th data-bs-toggle="tooltip" title="% from 52-week high">% off 52w High</th>
+                    <th>Setups</th>
+                    <th>Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr>
+                    <td><strong class="text-primary">{{ r.Symbol }}</strong></td>
+                    <td><small class="text-muted">{{ r.Sector or '—' }}</small></td>
+                    <td>${{ r.Close }}</td>
+                    <td>
+                        <span class="{% if r.RSI_14 < 30 %}text-success{% elif r.RSI_14 > 70 %}text-danger{% else %}text-warning{% endif %}">
+                            {{ r.RSI_14 }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="{% if r.Pct_From_52w_High > -2 %}text-success{% elif r.Pct_From_52w_High < -20 %}text-danger{% else %}text-warning{% endif %}">
+                            {{ r.Pct_From_52w_High }}%
+                        </span>
+                    </td>
+                    <td>
+                        {% for s in r.Setups %}
+                            {% set color = {
+                                'trend_pullback':'success',
+                                'high_52w_breakout':'primary',
+                                'volume_thrust':'info',
+                                'golden_cross':'warning',
+                                'bullish_rsi_divergence':'success'
+                            }[s] %}
+                            <span class="badge bg-{{ color }} me-1">{{ s.replace('_',' ') }}</span>
+                        {% endfor %}
+                    </td>
+                    <td><span class="badge bg-dark border">{{ r.Setup_Count }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card"><div class="card-body text-center text-muted py-5">
+    <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block"></i>
+    No setups triggered yet, or data is still being prepared.
+</div></div>
+{% endif %}
+{% endblock %}

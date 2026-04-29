@@ -1,0 +1,83 @@
+{% extends "_layout.html" %}
+{% block title %}Backtest Report{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <h2 class="mb-0"><i class="fas fa-history me-2 text-primary"></i>Signal Backtest</h2>
+    <small class="text-muted ms-auto">
+        {% if meta and meta.backtest %}Last refresh: {{ meta.backtest[:19].replace('T',' ') }}{% endif %}
+    </small>
+</div>
+
+<p class="text-muted mb-4">
+    Each signal is replayed across the universe over the last
+    <strong>{{ lookback or '3y' }}</strong> of daily bars.
+    On a signal day we "buy" the next open and exit
+    <strong>{{ holding_days }}</strong> trading days later at the close –
+    no stops, no sizing.  This isolates the raw edge of each individual signal.
+    Universe: <strong>{{ universe_size or '—' }}</strong> tickers.
+</p>
+
+{% if results %}
+<div class="card shadow-lg">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Signal</th>
+                    <th>Trades</th>
+                    <th>Hit Rate</th>
+                    <th>Avg Return</th>
+                    <th>Median Return</th>
+                    <th>Best</th>
+                    <th>Worst</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in results %}
+                <tr>
+                    <td><strong>{{ r.signal.replace('_',' ') }}</strong></td>
+                    <td>{{ r.trades }}</td>
+                    <td>
+                        {% if r.hit_rate is not none %}
+                        <span class="{% if r.hit_rate >= 55 %}text-success{% elif r.hit_rate >= 45 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ r.hit_rate }}%
+                        </span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if r.avg_return is not none %}
+                        <span class="{% if r.avg_return > 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ '+' if r.avg_return >= 0 else '' }}{{ r.avg_return }}%
+                        </span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if r.median_return is not none %}
+                            {{ '+' if r.median_return >= 0 else '' }}{{ r.median_return }}%
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="text-success">
+                        {% if r.max_return is not none %}+{{ r.max_return }}%{% else %}—{% endif %}
+                    </td>
+                    <td class="text-danger">
+                        {% if r.min_return is not none %}{{ r.min_return }}%{% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer text-muted small">
+        <strong>How to read this:</strong> a hit rate above 55% with a positive average return is a real
+        edge – consider giving that signal more weight in the Edge Score (see <code>edge_score.py</code>).
+        A signal with random performance (~50% hit rate, near-zero avg) should be deprioritised or removed.
+    </div>
+</div>
+{% else %}
+<div class="card"><div class="card-body text-center text-muted py-5">
+    <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block"></i>
+    The backtest hasn't been run yet. Click <strong>Refresh alpha</strong> in the navbar to start
+    – include backtest is run automatically once nightly.
+</div></div>
+{% endif %}
+{% endblock %}

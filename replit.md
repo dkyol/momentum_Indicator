@@ -1,6 +1,23 @@
 # Overview
 
-Stock Market Analytics is a Flask-based web application that provides comprehensive real-time analysis of 14 specific stocks through synchronized data tables and automated paper trading. The application displays high-volume stock rankings, advanced momentum analysis with technical indicators, Simple Moving Averages comparisons, and a live paper trading portfolio that automatically trades the top momentum stocks. Built as an educational and analytical tool, it offers users a professional dashboard view of market data with automated daily updates, secure password protection, and simulated trading performance tracking.
+Stock Market Analytics is a Flask-based web application that combines a real-time market dashboard, an automated paper-trading book, and a multi-page **Alpha & Opportunity Engine** for finding undervalued stocks and high-probability bullish setups across an ~100-ticker universe. The original 14-stock dashboard (high-volume ranking, momentum, SMAs, paper trading) is preserved on the home page; the alpha pages add value screening, relative strength, technical setups, sector rotation, market regime, catalysts, a composite Edge Score, and a signal backtester. Built as an educational and analytical tool, it offers users a professional dashboard view of market data with automated daily updates, secure password protection, and simulated trading performance tracking.
+
+## Alpha Engine (April 2026)
+
+A second analytics layer focused on idea discovery rather than monitoring:
+
+* **Universe** (`universe.py`) – curated S&P 100-style list with GICS sector tags + Sector SPDR ETF map.
+* **Fundamentals snapshot** (`fundamentals.py`) – nightly yfinance `.info` pull, cached as `cached_fundamentals.json`.
+* **Value & quality screen** (`value_screener.py`) – sector-relative cheapness percentile (P/E, P/B, P/S, EV/EBITDA, FCF yield) gated by a quality filter (positive FCF, D/E < 200, non-shrinking revenue).
+* **Relative strength** (`relative_strength.py`) – 1m/3m/6m/12m return percentiles vs SPY and vs sector ETFs, IBD-style 1-99 RS Rating, sector rotation table.
+* **Technical setups** (`setups.py`) – trend pullback, 52-week breakout, volume thrust, golden cross, bullish RSI divergence.
+* **Market regime** (`market_regime.py`) – SPY-vs-200d / VIX / breadth → risk_on / neutral / risk_off classifier; the paper trader skips new entries when risk_off.
+* **Catalysts** (`catalysts.py`) – upcoming earnings, 90-day insider transactions, short-interest snapshot.
+* **Composite Edge Score** (`edge_score.py`) – weighted blend (Value 30%, RS 30%, Setups 25%, Catalysts 15%) with reason strings; quality-failing stocks demoted.
+* **Signal backtester** (`backtester.py`) – 3-year holding-period replay (10 trading-day hold) of each setup with hit rate, average return, best/worst.
+* **Orchestrator** (`alpha_engine.py`) – `refresh_alpha_data(include_backtest=False)`; bootstrapped in a background thread on first app start, refreshed nightly via `scheduler.py`, and triggerable from the navbar "Refresh alpha" button.
+* **Routes**: `/opportunities`, `/value`, `/setups`, `/sectors`, `/catalysts`, `/backtest` (all wrapped by `templates/_layout.html` with a regime banner).
+* **Cache files**: `cached_fundamentals.json`, `cached_value_screen.json`, `cached_relative_strength.json`, `cached_setups.json`, `cached_market_regime.json`, `cached_catalysts.json`, `cached_edge_score.json`, `cached_backtest.json`, `cached_alpha_meta.json` (last-refreshed timestamps).
 
 # User Preferences
 

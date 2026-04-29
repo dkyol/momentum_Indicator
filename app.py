@@ -1,10 +1,30 @@
 import os
 import logging
+import threading
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 from stock_analytics import get_high_volume_data
 from momentum_analyzer import get_momentum_summary
-from scheduler import get_cached_high_volume_stocks, get_cached_momentum_data, get_cached_sma_data, get_last_update_info, is_data_fresh, save_market_data
+from scheduler import (
+    get_cached_high_volume_stocks,
+    get_cached_momentum_data,
+    get_cached_sma_data,
+    get_last_update_info,
+    is_data_fresh,
+    save_market_data,
+)
+
+# Alpha engine imports
+from alpha_cache import get_alpha_meta
+from alpha_engine import refresh_alpha_data
+from edge_score import get_cached_edge_scores
+from market_regime import get_cached_market_regime
+from relative_strength import get_cached_relative_strength, get_rs_rating_map
+from setups import get_cached_setups
+from value_screener import get_cached_value_screen
+from catalysts import get_cached_catalysts
+from backtester import get_cached_backtest
+
 # Import trader after app initialization to avoid circular imports
 trader = None
 
@@ -15,7 +35,7 @@ logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production")
 
-# Initialize cache on startup if needed
+
 def initialize_cache():
     """Initialize market data cache on startup if not fresh"""
     if not is_data_fresh():
@@ -25,80 +45,130 @@ def initialize_cache():
         except Exception as e:
             logging.error(f"Failed to initialize cache: {e}")
 
+
+def initialize_alpha_cache():
+    """Bootstrap the alpha engine in a background thread if no cache exists.
+
+    The full pipeline (fundamentals + relative strength + setups +
+    regime + catalysts + edge score) takes several minutes for the
+    universe, so we never block the web server on it.  The new pages
+    show "data being prepared" until the first refresh finishes.
+    """
+    if os.path.exists("cached_edge_score.json"):
+        return
+    logging.info("No alpha cache found - bootstrapping in background")
+
+    def _bg():
+        try:
+            refresh_alpha_data(include_backtest=False)
+        except Exception as e:
+            logging.error(f"Background alpha bootstrap failed: {e}")
+
+    threading.Thread(target=_bg, daemon=True).start()
+
+
 # Call initialization
 initialize_cache()
+initialize_alpha_cache()
+
 
 # Password for the site - use environment variable for security
 SITE_PASSWORD = os.environ.get("SITE_PASSWORD", "Eb10f600!")
 
+
 def login_required(f):
     """Decorator to require login for protected routes"""
     from functools import wraps
+
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not session.get('authenticated'):
-            return redirect(url_for('login'))
+        if not session.get("authenticated"):
+            return redirect(url_for("login"))
         return f(*args, **kwargs)
+
     return decorated_function
 
-@app.route('/login', methods=['GET', 'POST'])
+
+def _regime_for_template():
+    """Return a regime dict shape suitable for the banner template."""
+    r = get_cached_market_regime() or {}
+    label_map = {
+        "risk_on": ("Risk-On", "success"),
+        "neutral": ("Neutral", "warning"),
+        "risk_off": ("Risk-Off", "danger"),
+    }
+    label, css = label_map.get(r.get("regime"), ("Unknown", "secondary"))
+    r["label"] = label
+    r["css"] = css
+    return r
+
+
+@app.route("/login", methods=["GET", "POST"])
 def login():
     """Login page for password protection"""
-    if request.method == 'POST':
-        password = request.form.get('password', '').strip()
+    if request.method == "POST":
+        password = request.form.get("password", "").strip()
         if password == SITE_PASSWORD:
-            session['authenticated'] = True
-            return redirect(url_for('index'))
+            session["authenticated"] = True
+            return redirect(url_for("index"))
         else:
-            flash('Incorrect password. Please try again.', 'error')
-    
-    return render_template('login.html')
+            flash("Incorrect password. Please try again.", "error")
+    return render_template("login.html")
 
-@app.route('/logout')
+
+@app.route("/logout")
 def logout():
-    """Logout and clear session"""
     session.clear()
-    return redirect(url_for('login'))
+    return redirect(url_for("login"))
 
-@app.route('/')
+
+@app.route("/")
 @login_required
 def index():
     """Main page with stock prediction interface"""
     try:
-        # Use cached data or fetch fresh data if cache is stale
         import pytz
-        est_tz = pytz.timezone('US/Eastern')
-        
+
+        est_tz = pytz.timezone("US/Eastern")
+
         if is_data_fresh():
-            # Use cached data
             high_volume_stocks = get_cached_high_volume_stocks()
             momentum_data = get_cached_momentum_data()
             sma_data = get_cached_sma_data()
             last_update = get_last_update_info()
-            if last_update.get('last_update'):
+            if last_update.get("last_update"):
                 try:
-                    from datetime import datetime as dt
-                    update_dt = dt.fromisoformat(last_update['last_update'])
-                    # If no timezone info, assume UTC and convert to EST
+                    update_dt = datetime.fromisoformat(last_update["last_update"])
                     if update_dt.tzinfo is None:
                         update_dt = pytz.UTC.localize(update_dt)
                     update_dt_est = update_dt.astimezone(est_tz)
-                    current_time = f"Data queried on {update_dt_est.strftime('%B %d, %Y at %I:%M %p EST')} (cached data)"
+                    current_time = (
+                        f"Data queried on {update_dt_est.strftime('%B %d, %Y at %I:%M %p EST')} (cached data)"
+                    )
                 except Exception as e:
                     logging.error(f"Error parsing timestamp: {e}")
-                    current_time = datetime.now(est_tz).strftime("Data queried on %B %d, %Y at %I:%M %p EST (cached data)")
+                    current_time = datetime.now(est_tz).strftime(
+                        "Data queried on %B %d, %Y at %I:%M %p EST (cached data)"
+                    )
             else:
-                current_time = datetime.now(est_tz).strftime("Data queried on %B %d, %Y at %I:%M %p EST (cached data)")
+                current_time = datetime.now(est_tz).strftime(
+                    "Data queried on %B %d, %Y at %I:%M %p EST (cached data)"
+                )
         else:
-            # Fetch fresh data and cache it
             logging.info("Cache is stale, fetching fresh data...")
             save_market_data()
             high_volume_stocks = get_cached_high_volume_stocks()
             momentum_data = get_cached_momentum_data()
             sma_data = get_cached_sma_data()
-            current_time = datetime.now(est_tz).strftime("Data queried on %B %d, %Y at %I:%M %p EST (fresh data)")
-        
-        # Get paper trading portfolio summary
+            current_time = datetime.now(est_tz).strftime(
+                "Data queried on %B %d, %Y at %I:%M %p EST (fresh data)"
+            )
+
+        # Stitch RS rating into the existing momentum table.
+        rs_map = get_rs_rating_map()
+        for row in momentum_data or []:
+            row["RS_Rating"] = rs_map.get(row.get("Symbol"))
+
         portfolio_summary = None
         try:
             global trader
@@ -109,61 +179,182 @@ def index():
         except Exception as e:
             app.logger.error(f"Error getting portfolio summary: {e}")
             portfolio_summary = None
-        
-        return render_template('index.html', 
-                             high_volume_stocks=high_volume_stocks,
-                             momentum_data=momentum_data,
-                             sma_data=sma_data,
-                             portfolio_summary=portfolio_summary,
-                             query_time=current_time)
+
+        return render_template(
+            "index.html",
+            high_volume_stocks=high_volume_stocks,
+            momentum_data=momentum_data,
+            sma_data=sma_data,
+            portfolio_summary=portfolio_summary,
+            query_time=current_time,
+            regime=_regime_for_template(),
+        )
     except Exception as e:
         app.logger.error(f"Error loading high volume data: {str(e)}")
-        # Still render page even if data fails to load
-        return render_template('index.html', 
-                             high_volume_stocks=[],
-                             momentum_data=[],
-                             sma_data=[],
-                             portfolio_summary=None,
-                             query_time="Data unavailable")
+        return render_template(
+            "index.html",
+            high_volume_stocks=[],
+            momentum_data=[],
+            sma_data=[],
+            portfolio_summary=None,
+            query_time="Data unavailable",
+            regime=_regime_for_template(),
+        )
 
 
+# ------------------------------------------------------------------
+# Alpha pages
+# ------------------------------------------------------------------
 
-@app.route('/trigger_monitoring', methods=['POST'])
+
+@app.route("/opportunities")
+@login_required
+def opportunities():
+    payload = get_cached_edge_scores()
+    return render_template(
+        "opportunities.html",
+        rows=payload.get("top", []),
+        all_rows=payload.get("rows", []),
+        regime=_regime_for_template(),
+        meta=get_alpha_meta(),
+    )
+
+
+@app.route("/value")
+@login_required
+def value():
+    rows = get_cached_value_screen()
+    return render_template(
+        "value.html",
+        rows=rows,
+        regime=_regime_for_template(),
+        meta=get_alpha_meta(),
+    )
+
+
+@app.route("/setups")
+@login_required
+def setups():
+    rows = get_cached_setups()
+    rows = [r for r in rows if r.get("Setup_Count", 0) > 0]
+    return render_template(
+        "setups.html",
+        rows=rows,
+        regime=_regime_for_template(),
+        meta=get_alpha_meta(),
+    )
+
+
+@app.route("/sectors")
+@login_required
+def sectors():
+    payload = get_cached_relative_strength()
+    return render_template(
+        "sectors.html",
+        rotation=payload.get("rotation", []),
+        rows=payload.get("rows", []),
+        market_returns=payload.get("market_returns", {}),
+        regime=_regime_for_template(),
+        meta=get_alpha_meta(),
+    )
+
+
+@app.route("/catalysts")
+@login_required
+def catalysts_view():
+    rows = get_cached_catalysts()
+    # Sort: earnings within 14 days first, then insider buying.
+    rows.sort(
+        key=lambda r: (
+            -1 if r.get("earnings_within_14d") else 0,
+            -1 if r.get("insider_buying_30d_plus") else 0,
+            r.get("days_to_earnings") if r.get("days_to_earnings") is not None else 9999,
+        )
+    )
+    return render_template(
+        "catalysts.html",
+        rows=rows,
+        regime=_regime_for_template(),
+        meta=get_alpha_meta(),
+    )
+
+
+@app.route("/backtest")
+@login_required
+def backtest():
+    payload = get_cached_backtest()
+    return render_template(
+        "backtest.html",
+        results=payload.get("results", []),
+        holding_days=payload.get("holding_days"),
+        lookback=payload.get("lookback"),
+        universe_size=payload.get("universe_size"),
+        regime=_regime_for_template(),
+        meta=get_alpha_meta(),
+    )
+
+
+@app.route("/refresh_alpha", methods=["POST"])
+@login_required
+def refresh_alpha():
+    """Kick off a full alpha refresh in the background.
+
+    Runs in a daemon thread so the request returns instantly; the
+    dashboard pages will pick up the new cache files on the next
+    page load.  ``include_backtest`` is opt-in because the backtester
+    is the slowest step.
+    """
+    include_backtest = request.form.get("include_backtest") == "1"
+
+    def _run():
+        try:
+            refresh_alpha_data(include_backtest=include_backtest)
+        except Exception as e:
+            app.logger.error(f"Alpha refresh failed: {e}")
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    return jsonify({"started": True, "include_backtest": include_backtest})
+
+
+@app.route("/trigger_monitoring", methods=["POST"])
 def trigger_monitoring():
-    """Trigger portfolio monitoring and return updated status"""
     try:
         global trader
         if trader is None:
             from paper_trader import trader as global_trader
             trader = global_trader
-        
-        # Run monitoring cycle
+
         trader.monitoring_cycle()
-        
-        # Get updated portfolio summary
         portfolio_summary = trader.get_portfolio_summary()
-        
-        return jsonify({
-            'success': True,
-            'last_updated': portfolio_summary['last_updated'].strftime('%I:%M %p EST') if portfolio_summary.get('last_updated') else None,
-            'total_value': portfolio_summary.get('total_value', 0),
-            'total_pnl': portfolio_summary.get('total_pnl', 0),
-            'message': 'Portfolio monitoring completed'
-        })
+
+        return jsonify(
+            {
+                "success": True,
+                "last_updated": (
+                    portfolio_summary["last_updated"].strftime("%I:%M %p EST")
+                    if portfolio_summary.get("last_updated")
+                    else None
+                ),
+                "total_value": portfolio_summary.get("total_value", 0),
+                "total_pnl": portfolio_summary.get("total_pnl", 0),
+                "message": "Portfolio monitoring completed",
+            }
+        )
     except Exception as e:
         app.logger.error(f"Error in monitoring trigger: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 @app.errorhandler(404)
 def not_found(error):
-    return render_template('index.html'), 404
+    return render_template("index.html"), 404
+
 
 @app.errorhandler(500)
 def internal_error(error):
-    return render_template('index.html'), 500
+    return render_template("index.html"), 500
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Stock Market Analytics{% endblock %}</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom border-secondary">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">
+                <i class="fas fa-chart-line me-2 text-primary"></i>Stock Analytics
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="mainNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint=='index' %}active fw-bold{% endif %}"
+                           href="{{ url_for('index') }}">
+                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint=='opportunities' %}active fw-bold{% endif %}"
+                           href="{{ url_for('opportunities') }}">
+                            <i class="fas fa-bullseye me-1"></i>Opportunities
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint=='value' %}active fw-bold{% endif %}"
+                           href="{{ url_for('value') }}">
+                            <i class="fas fa-tags me-1"></i>Value
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint=='setups' %}active fw-bold{% endif %}"
+                           href="{{ url_for('setups') }}">
+                            <i class="fas fa-bolt me-1"></i>Setups
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint=='sectors' %}active fw-bold{% endif %}"
+                           href="{{ url_for('sectors') }}">
+                            <i class="fas fa-layer-group me-1"></i>Sectors / RS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint=='catalysts_view' %}active fw-bold{% endif %}"
+                           href="{{ url_for('catalysts_view') }}">
+                            <i class="fas fa-calendar-alt me-1"></i>Catalysts
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint=='backtest' %}active fw-bold{% endif %}"
+                           href="{{ url_for('backtest') }}">
+                            <i class="fas fa-history me-1"></i>Backtest
+                        </a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center gap-2">
+                    <button id="refreshAlphaBtn" class="btn btn-sm btn-outline-primary" type="button">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh alpha
+                    </button>
+                    <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    {# Market regime banner #}
+    {% if regime %}
+    <div class="bg-body-secondary border-bottom border-secondary py-2">
+        <div class="container-fluid px-4 d-flex flex-wrap align-items-center gap-3">
+            <span class="badge bg-{{ regime.css }} fs-6 px-3 py-2">
+                <i class="fas fa-shield-alt me-1"></i>Market regime: {{ regime.label }}
+            </span>
+            {% if regime.spy_close is not none %}
+            <small class="text-muted">
+                SPY <strong class="text-body">${{ regime.spy_close }}</strong>
+                {% if regime.spy_pct_vs_200 is not none %}
+                <span class="{% if regime.spy_pct_vs_200 >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    ({{ '+' if regime.spy_pct_vs_200 >= 0 else '' }}{{ regime.spy_pct_vs_200 }}% vs 200d SMA)
+                </span>
+                {% endif %}
+            </small>
+            {% endif %}
+            {% if regime.vix is not none %}
+            <small class="text-muted">VIX <strong class="text-body">{{ regime.vix }}</strong></small>
+            {% endif %}
+            {% if regime.breadth_pct is not none %}
+            <small class="text-muted">
+                Breadth <strong class="text-body">{{ regime.breadth_pct }}%</strong>
+                <span class="text-muted">({{ regime.breadth_above }}/{{ regime.breadth_total }} above 50d SMA)</span>
+            </small>
+            {% endif %}
+            <small class="text-muted ms-auto" id="refreshStatus"></small>
+        </div>
+    </div>
+    {% endif %}
+
+    <main class="container-fluid py-4 px-4">
+        {% block content %}{% endblock %}
+
+        <div class="alert alert-warning mt-5 mb-2 small" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Disclaimer:</strong> Educational use only. Not financial advice. Past signal performance does not guarantee future results.
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Refresh-alpha button: kicks off a server-side background job.
+        const btn = document.getElementById('refreshAlphaBtn');
+        const status = document.getElementById('refreshStatus');
+        if (btn) {
+            btn.addEventListener('click', async () => {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing…';
+                if (status) status.textContent = 'Alpha refresh started in the background. Reload pages in a few minutes.';
+                try {
+                    await fetch('{{ url_for("refresh_alpha") }}', {method: 'POST'});
+                } catch (e) {
+                    if (status) status.textContent = 'Failed to start refresh: ' + e;
+                }
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>Refresh alpha';
+                }, 3000);
+            });
+        }
+        // Enable Bootstrap tooltips wherever data-bs-toggle="tooltip" appears.
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

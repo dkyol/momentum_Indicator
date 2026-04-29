@@ -14,6 +14,7 @@ import pytz
 from stock_analytics import get_high_volume_data
 from momentum_analyzer import get_momentum_summary
 from sma_analyzer import get_sma_summary
+from alpha_engine import refresh_alpha_data
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -140,6 +141,14 @@ def is_data_fresh():
         logger.error(f"Error checking data freshness: {e}")
         return False
 
+def refresh_alpha_with_backtest():
+    """Wrapper used by the nightly schedule – includes the slow backtest step."""
+    try:
+        refresh_alpha_data(include_backtest=True)
+    except Exception as e:
+        logger.error(f"Nightly alpha refresh failed: {e}")
+
+
 def run_scheduler():
     """
     Run the scheduler to update market data daily at 10:05 AM EST.
@@ -152,6 +161,15 @@ def run_scheduler():
     schedule.every().wednesday.at("15:05").do(save_market_data)
     schedule.every().thursday.at("15:05").do(save_market_data)
     schedule.every().friday.at("15:05").do(save_market_data)
+
+    # Schedule nightly alpha-engine refresh at 10:30 PM EST (after market
+    # close, after fundamentals settle).  Includes the slow backtest step.
+    schedule.every().monday.at("03:30").do(refresh_alpha_with_backtest)
+    schedule.every().tuesday.at("03:30").do(refresh_alpha_with_backtest)
+    schedule.every().wednesday.at("03:30").do(refresh_alpha_with_backtest)
+    schedule.every().thursday.at("03:30").do(refresh_alpha_with_backtest)
+    schedule.every().friday.at("03:30").do(refresh_alpha_with_backtest)
+    schedule.every().saturday.at("03:30").do(refresh_alpha_with_backtest)
     
     # Run initial update if no fresh data exists
     if not is_data_fresh():

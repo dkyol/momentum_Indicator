@@ -1,0 +1,75 @@
+{% extends "_layout.html" %}
+{% block title %}Opportunities · Edge Score{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <h2 class="mb-0"><i class="fas fa-bullseye me-2 text-primary"></i>Top Opportunities</h2>
+    <span class="badge bg-primary ms-3">Composite Edge Score</span>
+    <small class="text-muted ms-auto">
+        {% if meta and meta.edge %}Last refresh: {{ meta.edge[:19].replace('T',' ') }}{% endif %}
+    </small>
+</div>
+
+<p class="text-muted mb-4">
+    Each candidate combines four edges – sector-relative cheapness, relative strength vs the universe,
+    bullish technical setups, and upcoming catalysts – into a single 0-100 score.
+    Stocks failing the quality gate (negative FCF, excessive debt, shrinking revenue) are excluded.
+</p>
+
+{% if rows %}
+<div class="card shadow-lg">
+    <div class="card-header d-flex align-items-center">
+        <h5 class="mb-0"><i class="fas fa-trophy me-2 text-warning"></i>Top {{ rows|length }} Candidates</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Symbol</th>
+                    <th>Sector</th>
+                    <th>Edge Score</th>
+                    <th>Value</th>
+                    <th>RS</th>
+                    <th>Setups</th>
+                    <th>Reason</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr>
+                    <td class="text-muted">{{ loop.index }}</td>
+                    <td><strong class="text-primary">{{ r.Symbol }}</strong></td>
+                    <td><small class="text-muted">{{ r.Sector or '—' }}</small></td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="progress me-2" style="width: 80px; height: 18px;">
+                                <div class="progress-bar {% if r.Edge_Score >= 70 %}bg-success{% elif r.Edge_Score >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                                     style="width: {{ r.Edge_Score }}%"></div>
+                            </div>
+                            <span class="fw-bold {% if r.Edge_Score >= 70 %}text-success{% elif r.Edge_Score >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                                {{ r.Edge_Score }}
+                            </span>
+                        </div>
+                    </td>
+                    <td>{% if r.Value_Score is not none %}{{ r.Value_Score }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                    <td>{% if r.RS_Rating is not none %}{{ r.RS_Rating }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                    <td>
+                        {% if r.Setups %}
+                        {% for s in r.Setups %}<span class="badge bg-secondary me-1">{{ s.replace('_',' ') }}</span>{% endfor %}
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td><small>{{ r.Reason }}</small></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card"><div class="card-body text-center text-muted py-5">
+    <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block"></i>
+    Alpha data is being prepared in the background.
+    First-time bootstrap takes a few minutes – reload this page shortly.
+</div></div>
+{% endif %}
+{% endblock %}

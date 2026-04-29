@@ -1,0 +1,87 @@
+{% extends "_layout.html" %}
+{% block title %}Value Screener{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <h2 class="mb-0"><i class="fas fa-tags me-2 text-primary"></i>Value & Quality Screener</h2>
+    <span class="badge bg-primary ms-3">Sector-Relative</span>
+    <small class="text-muted ms-auto">
+        {% if meta and meta.value %}Last refresh: {{ meta.value[:19].replace('T',' ') }}{% endif %}
+    </small>
+</div>
+
+<p class="text-muted mb-4">
+    Composite cheapness percentile within each sector (0 = priciest, 100 = cheapest), built from
+    P/E, P/B, P/S, EV/EBITDA, and FCF yield. The <strong>Quality OK</strong> tag flags positive free cash flow,
+    debt/equity under 200, and non-shrinking revenue.
+</p>
+
+{% if rows %}
+<div class="card shadow-lg">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Symbol</th>
+                    <th>Sector</th>
+                    <th data-bs-toggle="tooltip" title="Sector-relative cheapness percentile (0-100)">Value Score</th>
+                    <th>P/E</th>
+                    <th>P/B</th>
+                    <th>P/S</th>
+                    <th>EV/EBITDA</th>
+                    <th data-bs-toggle="tooltip" title="Free Cash Flow / Market Cap">FCF Yield</th>
+                    <th data-bs-toggle="tooltip" title="Debt-to-Equity (yfinance reports as %)">D/E</th>
+                    <th data-bs-toggle="tooltip" title="Year-over-year revenue growth">Rev Growth</th>
+                    <th>Quality</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr {% if not r.Quality_OK %}class="opacity-50"{% endif %}>
+                    <td><strong class="text-primary">{{ r.Symbol }}</strong></td>
+                    <td><small class="text-muted">{{ r.Sector or '—' }}</small></td>
+                    <td>
+                        {% if r.Value_Score is not none %}
+                        <span class="fw-bold {% if r.Value_Score >= 70 %}text-success{% elif r.Value_Score >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ r.Value_Score }}
+                        </span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>{{ r.trailingPE|round(1) if r.trailingPE is not none else '—' }}</td>
+                    <td>{{ r.priceToBook|round(2) if r.priceToBook is not none else '—' }}</td>
+                    <td>{{ r.priceToSalesTrailing12Months|round(2) if r.priceToSalesTrailing12Months is not none else '—' }}</td>
+                    <td>{{ r.enterpriseToEbitda|round(1) if r.enterpriseToEbitda is not none else '—' }}</td>
+                    <td>
+                        {% if r.FCF_Yield is not none %}
+                        <span class="{% if r.FCF_Yield >= 0.05 %}text-success{% elif r.FCF_Yield <= 0 %}text-danger{% endif %}">
+                            {{ (r.FCF_Yield * 100)|round(2) }}%
+                        </span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>{{ r.debtToEquity|round(0) if r.debtToEquity is not none else '—' }}</td>
+                    <td>
+                        {% if r.revenueGrowth is not none %}
+                        <span class="{% if r.revenueGrowth >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ (r.revenueGrowth * 100)|round(1) }}%
+                        </span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if r.Quality_OK %}
+                        <span class="badge bg-success"><i class="fas fa-check"></i></span>
+                        {% else %}
+                        <span class="badge bg-danger"><i class="fas fa-times"></i></span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card"><div class="card-body text-center text-muted py-5">
+    <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block"></i>
+    Fundamentals snapshot is being prepared in the background. Reload in a few minutes.
+</div></div>
+{% endif %}
+{% endblock %}

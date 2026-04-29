@@ -325,7 +325,23 @@ class PaperTrader:
                 if not is_valid:
                     self.log_message(f"Trade execution blocked: {reason}", "WARNING")
                     return False
-            
+
+            # Stand down on risk-off days (per market regime panel).
+            try:
+                from market_regime import get_cached_market_regime, is_risk_on
+                regime = get_cached_market_regime().get("regime")
+                if not is_risk_on():
+                    self.log_message(
+                        f"Trade execution skipped: market regime is {regime}",
+                        "WARNING",
+                    )
+                    return False
+            except Exception as e:
+                self.log_message(
+                    f"Regime check unavailable, proceeding with trades: {e}",
+                    "WARNING",
+                )
+
             self.log_message("Starting morning trade execution", "INFO")
             
             # Get top 2 momentum stocks

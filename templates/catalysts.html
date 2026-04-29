@@ -1,0 +1,77 @@
+{% extends "_layout.html" %}
+{% block title %}Catalysts{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <h2 class="mb-0"><i class="fas fa-calendar-alt me-2 text-primary"></i>Catalysts</h2>
+    <small class="text-muted ms-auto">
+        {% if meta and meta.catalysts %}Last refresh: {{ meta.catalysts[:19].replace('T',' ') }}{% endif %}
+    </small>
+</div>
+
+<p class="text-muted mb-4">
+    Upcoming earnings, recent insider transactions (last 90 days), and short-interest snapshot per stock.
+    Filters: rows with earnings within 14 days or net-positive insider buying are surfaced first.
+</p>
+
+{% if rows %}
+<div class="card shadow-lg">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Symbol</th>
+                    <th>Next Earnings</th>
+                    <th>Days</th>
+                    <th>Insider Buys (90d)</th>
+                    <th>Insider Sells (90d)</th>
+                    <th>Net $ (90d)</th>
+                    <th>Short % Float</th>
+                    <th>Flags</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr>
+                    <td><strong class="text-primary">{{ r.Symbol }}</strong></td>
+                    <td>{{ r.next_earnings_date or '—' }}</td>
+                    <td>
+                        {% if r.days_to_earnings is not none %}
+                        <span class="{% if r.earnings_within_14d %}text-warning fw-bold{% endif %}">
+                            {{ r.days_to_earnings }}d
+                        </span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>{{ r.insider_buys_90d }}</td>
+                    <td>{{ r.insider_sells_90d }}</td>
+                    <td>
+                        {% if r.insider_net_value_90d %}
+                        <span class="{% if r.insider_net_value_90d > 0 %}text-success{% else %}text-danger{% endif %}">
+                            ${{ '{:,.0f}'.format(r.insider_net_value_90d) }}
+                        </span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if r.short_pct_float is not none %}
+                        <span class="{% if r.high_short_interest %}text-warning fw-bold{% endif %}">
+                            {{ r.short_pct_float }}%
+                        </span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if r.earnings_within_14d %}<span class="badge bg-warning text-dark me-1">earnings &lt;14d</span>{% endif %}
+                        {% if r.insider_buying_30d_plus %}<span class="badge bg-success me-1">insider buying</span>{% endif %}
+                        {% if r.high_short_interest %}<span class="badge bg-info me-1">high short</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card"><div class="card-body text-center text-muted py-5">
+    <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block"></i>
+    Catalyst data is being prepared in the background.
+</div></div>
+{% endif %}
+{% endblock %}
