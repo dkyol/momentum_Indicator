@@ -21,17 +21,17 @@
         <table class="table table-hover mb-0 align-middle">
             <thead class="table-dark">
                 <tr>
-                    <th>Symbol</th>
-                    <th>Sector</th>
-                    <th data-bs-toggle="tooltip" title="Sector-relative cheapness percentile (0-100)">Value Score</th>
-                    <th>P/E</th>
-                    <th>P/B</th>
-                    <th>P/S</th>
-                    <th>EV/EBITDA</th>
-                    <th data-bs-toggle="tooltip" title="Free Cash Flow / Market Cap">FCF Yield</th>
-                    <th data-bs-toggle="tooltip" title="Debt-to-Equity (yfinance reports as %)">D/E</th>
-                    <th data-bs-toggle="tooltip" title="Year-over-year revenue growth">Rev Growth</th>
-                    <th>Quality</th>
+                    <th class="sortable" data-sort="text" data-col="0">Symbol <i class="fas fa-sort text-muted small"></i></th>
+                    <th class="sortable" data-sort="text" data-col="1">Sector <i class="fas fa-sort text-muted small"></i></th>
+                    <th class="sortable" data-sort="num" data-col="2" data-bs-toggle="tooltip" title="Sector-relative cheapness percentile (0-100)">Value Score <i class="fas fa-sort text-muted small"></i></th>
+                    <th class="sortable" data-sort="num" data-col="3">P/E <i class="fas fa-sort text-muted small"></i></th>
+                    <th class="sortable" data-sort="num" data-col="4">P/B <i class="fas fa-sort text-muted small"></i></th>
+                    <th class="sortable" data-sort="num" data-col="5">P/S <i class="fas fa-sort text-muted small"></i></th>
+                    <th class="sortable" data-sort="num" data-col="6">EV/EBITDA <i class="fas fa-sort text-muted small"></i></th>
+                    <th class="sortable" data-sort="num" data-col="7" data-bs-toggle="tooltip" title="Free Cash Flow / Market Cap">FCF Yield <i class="fas fa-sort text-muted small"></i></th>
+                    <th class="sortable" data-sort="num" data-col="8" data-bs-toggle="tooltip" title="Debt-to-Equity (yfinance reports as %)">D/E <i class="fas fa-sort text-muted small"></i></th>
+                    <th class="sortable" data-sort="num" data-col="9" data-bs-toggle="tooltip" title="Year-over-year revenue growth">Rev Growth <i class="fas fa-sort text-muted small"></i></th>
+                    <th class="sortable" data-sort="text" data-col="10">Quality <i class="fas fa-sort text-muted small"></i></th>
                 </tr>
             </thead>
             <tbody>
@@ -84,4 +84,72 @@
     Fundamentals snapshot is being prepared in the background. Reload in a few minutes.
 </div></div>
 {% endif %}
+
+<style>
+    th.sortable { cursor: pointer; user-select: none; }
+    th.sortable:hover { background-color: rgba(255, 255, 255, 0.05); }
+    th.sortable.sort-asc i, th.sortable.sort-desc i { color: var(--bs-info) !important; }
+</style>
+
+<script>
+(function () {
+    // Lightweight client-side sort for the Value table.  Numeric columns
+    // parse the cell's textContent (stripping % signs); blank/"—" values
+    // sort to the bottom regardless of direction.  Quality column sorts
+    // by the badge label text ("yes"/"no" via icon's adjacent text).
+    const table = document.querySelector("table");
+    if (!table) return;
+    const tbody = table.querySelector("tbody");
+    const headers = table.querySelectorAll("th.sortable");
+
+    function parseNum(s) {
+        if (s == null) return NaN;
+        s = s.replace(/[%,\s]/g, "");
+        if (s === "" || s === "—" || s === "-") return NaN;
+        const v = parseFloat(s);
+        return isNaN(v) ? NaN : v;
+    }
+
+    function cellValue(row, col, type) {
+        const td = row.children[col];
+        if (!td) return type === "num" ? NaN : "";
+        const text = (td.textContent || "").trim();
+        return type === "num" ? parseNum(text) : text.toLowerCase();
+    }
+
+    headers.forEach(function (th) {
+        th.addEventListener("click", function () {
+            const col = parseInt(th.dataset.col, 10);
+            const type = th.dataset.sort;
+            const asc = !th.classList.contains("sort-asc");
+
+            headers.forEach(function (h) {
+                h.classList.remove("sort-asc", "sort-desc");
+                const i = h.querySelector("i");
+                if (i) i.className = "fas fa-sort text-muted small";
+            });
+            th.classList.add(asc ? "sort-asc" : "sort-desc");
+            const ic = th.querySelector("i");
+            if (ic) ic.className = "fas " + (asc ? "fa-sort-up" : "fa-sort-down") + " small";
+
+            const rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+            rows.sort(function (a, b) {
+                const va = cellValue(a, col, type);
+                const vb = cellValue(b, col, type);
+                const aBlank = type === "num" ? isNaN(va) : va === "" || va === "—";
+                const bBlank = type === "num" ? isNaN(vb) : vb === "" || vb === "—";
+                if (aBlank && bBlank) return 0;
+                if (aBlank) return 1;   // blanks always last
+                if (bBlank) return -1;
+                if (va < vb) return asc ? -1 : 1;
+                if (va > vb) return asc ? 1 : -1;
+                return 0;
+            });
+            const frag = document.createDocumentFragment();
+            rows.forEach(function (r) { frag.appendChild(r); });
+            tbody.appendChild(frag);
+        });
+    });
+})();
+</script>
 {% endblock %}

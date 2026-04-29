@@ -31,12 +31,14 @@
                     <th>Value</th>
                     <th>RS</th>
                     <th>Setups</th>
+                    <th data-bs-toggle="tooltip" title="Upcoming earnings, insider buying, or high short interest">Catalysts</th>
+                    <th data-bs-toggle="tooltip" title="Positive FCF, debt/equity under 200, non-shrinking revenue">Quality</th>
                     <th>Reason</th>
                 </tr>
             </thead>
             <tbody>
                 {% for r in rows %}
-                <tr>
+                <tr {% if not r.Quality_OK %}class="opacity-50"{% endif %}>
                     <td class="text-muted">{{ loop.index }}</td>
                     <td><strong class="text-primary">{{ r.Symbol }}</strong></td>
                     <td><small class="text-muted">{{ r.Sector or '—' }}</small></td>
@@ -57,6 +59,32 @@
                         {% if r.Setups %}
                         {% for s in r.Setups %}<span class="badge bg-secondary me-1">{{ s.replace('_',' ') }}</span>{% endfor %}
                         {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% set has_cat = r.Earnings_Soon or r.Insider_Buying or r.High_Short_Interest %}
+                        {% if r.Earnings_Soon %}
+                            <span class="badge bg-info me-1" title="Earnings in {{ r.Days_To_Earnings }} day(s) ({{ r.Next_Earnings }})">
+                                <i class="fas fa-calendar"></i> {{ r.Days_To_Earnings }}d
+                            </span>
+                        {% endif %}
+                        {% if r.Insider_Buying %}
+                            <span class="badge bg-success me-1" title="Net insider buying in last 90d">
+                                <i class="fas fa-user-tie"></i> insider
+                            </span>
+                        {% endif %}
+                        {% if r.High_Short_Interest %}
+                            <span class="badge bg-warning text-dark me-1" title="Short interest >= 15% of float">
+                                <i class="fas fa-bolt"></i> short
+                            </span>
+                        {% endif %}
+                        {% if not has_cat %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if r.Quality_OK %}
+                            <span class="badge bg-success" title="Passes quality gate"><i class="fas fa-check"></i> yes</span>
+                        {% else %}
+                            <span class="badge bg-danger" title="Fails quality gate (negative FCF, excessive debt, or shrinking revenue)"><i class="fas fa-times"></i> no</span>
+                        {% endif %}
                     </td>
                     <td><small>{{ r.Reason }}</small></td>
                 </tr>

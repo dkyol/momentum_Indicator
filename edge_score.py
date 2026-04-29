@@ -169,6 +169,9 @@ def compute_edge_scores(top_n: int = 25) -> dict:
                 "Pct_From_52w_High": (s or {}).get("Pct_From_52w_High"),
                 "Next_Earnings": (c or {}).get("next_earnings_date"),
                 "Days_To_Earnings": (c or {}).get("days_to_earnings"),
+                "Earnings_Soon": bool((c or {}).get("earnings_within_14d")),
+                "Insider_Buying": bool((c or {}).get("insider_buying_30d_plus")),
+                "High_Short_Interest": bool((c or {}).get("high_short_interest")),
             }
         )
 
