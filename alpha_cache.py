@@ -108,11 +108,18 @@ def load_json(path: str, default: Any) -> Any:
     return default
 
 
-def stamp_alpha_refresh(section: str) -> None:
-    """Record the current EST timestamp for a named alpha section."""
+def stamp_alpha_refresh(section: str, extra: dict | None = None) -> None:
+    """Record the current EST timestamp for a named alpha section.
+
+    Optional ``extra`` dict is merged into the meta payload so callers
+    can record per-section health metrics (counts, populated %, status
+    flags) alongside the timestamp.  Keys overwrite any prior value.
+    """
     with _meta_lock:
         meta = load_json(CACHE_ALPHA_META, {})
         meta[section] = datetime.now(EST).isoformat()
+        if extra:
+            meta.update(extra)
         save_json(CACHE_ALPHA_META, meta)
 
 

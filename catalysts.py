@@ -155,11 +155,72 @@ def compute_catalysts() -> list[dict]:
 
 
 def save_catalysts() -> list[dict]:
+    """Refresh catalysts and persist to cache.
+
+    yfinance's ``Ticker.calendar`` and ``Ticker.insider_transactions``
+    endpoints route through Yahoo's anonymous quoteSummary API, which
+    aggressively rate-limits at our universe size (~280 tickers × 2
+    endpoints).  When the run is rate-limited every row comes back with
+    no earnings date and no insider activity.  In that case we keep the
+    previous cache rather than overwriting good data with zeros, and
+    stamp a health metric into ``cached_alpha_meta`` so the degraded
+    state is visible.
+    """
     rows = compute_catalysts()
+    with_earnings = sum(1 for r in rows if r.get("next_earnings_date"))
+    with_insider = sum(
+        1
+        for r in rows
+        if (r.get("insider_buys_90d", 0) or r.get("insider_sells_90d", 0))
+    )
+    n = max(1, len(rows))
+    health = {
+        "catalysts_total": len(rows),
+        "catalysts_with_earnings": with_earnings,
+        "catalysts_with_insider": with_insider,
+        "catalysts_earnings_pct": round(100 * with_earnings / n, 1),
+        "catalysts_insider_pct": round(100 * with_insider / n, 1),
+    }
+
+    if with_earnings == 0 and with_insider == 0:
+        prior = load_json(CACHE_CATALYSTS, {})
+        prior_rows = prior.get("rows", []) if isinstance(prior, dict) else []
+        prior_with_data = sum(
+            1
+            for r in prior_rows
+            if r.get("next_earnings_date")
+            or r.get("insider_buys_90d")
+            or r.get("insider_sells_90d")
+        )
+        if prior_with_data > 0:
+            logger.warning(
+                "Catalyst refresh appears rate-limited (0 earnings / 0 insider "
+                "records across %d tickers); keeping previous cache with %d "
+                "populated rows.",
+                len(rows),
+                prior_with_data,
+            )
+            stamp_alpha_refresh("catalysts", extra={**health, "catalysts_status": "rate_limited_kept_prior"})
+            return prior_rows
+        logger.warning(
+            "Catalyst refresh returned no earnings or insider data for %d "
+            "tickers (likely Yahoo rate limit); short interest still populated "
+            "from cached fundamentals.",
+            len(rows),
+        )
+        health["catalysts_status"] = "rate_limited_no_prior"
+    else:
+        health["catalysts_status"] = "ok"
+
     payload = {"as_of": datetime.now(EST).isoformat(), "rows": rows}
     save_json(CACHE_CATALYSTS, payload)
-    stamp_alpha_refresh("catalysts")
-    logger.info(f"Cached catalysts for {len(rows)} tickers")
+    stamp_alpha_refresh("catalysts", extra=health)
+    logger.info(
+        "Cached catalysts for %d tickers (earnings: %d, insider: %d)",
+        len(rows),
+        with_earnings,
+        with_insider,
+    )
     return rows
 
 
