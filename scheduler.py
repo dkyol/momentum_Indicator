@@ -9,7 +9,7 @@ import time
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, time as dtime, timezone
 import pytz
 from stock_analytics import get_high_volume_data
 from momentum_analyzer import get_momentum_summary
@@ -155,30 +155,43 @@ def run_scheduler():
     """
     logger.info("Starting market data scheduler...")
     
-    # NOTE: schedule.py runs in the host process's local time, but we want
-    # deterministic UTC-anchored slots so the jobs fire at the same wall-clock
-    # moment regardless of where the container is hosted.  All times below
-    # are absolute UTC.  In US/Eastern this lands at:
+    # We want deterministic UTC-anchored slots so jobs fire at the same
+    # wall-clock moment regardless of where the container is hosted.
+    # The `schedule` library only understands the host process's *local*
+    # time, so we convert each desired UTC slot into the equivalent
+    # local-clock HH:MM at startup and register that with schedule.at().
+    # In US/Eastern this lands at:
     #   * 15:05 UTC  -> 10:05 EST / 11:05 EDT  (post-open daily refresh)
-    #   * 03:30 UTC  -> 22:30 EST / 23:30 EDT  (nightly alpha + backtest,
-    #                                           after US market close)
-    # The DST drift is intentional: anchoring to UTC keeps the schedule
-    # stable, only the EST/EDT wall-clock label shifts twice a year.
-    UTC_DAILY_REFRESH = "15:05"
-    UTC_NIGHTLY_ALPHA = "03:30"
+    #   * 03:30 UTC  -> 22:30 EST / 23:30 EDT  (nightly alpha + backtest)
+    # Caveat: if the host transitions DST mid-process, the absolute UTC
+    # firing moment shifts by 1 hour until next restart.  Most cloud
+    # hosts run on UTC where this is a no-op.
+    UTC_DAILY_REFRESH_HHMM = (15, 5)
+    UTC_NIGHTLY_ALPHA_HHMM = (3, 30)
 
-    schedule.every().monday.at(UTC_DAILY_REFRESH).do(save_market_data)
-    schedule.every().tuesday.at(UTC_DAILY_REFRESH).do(save_market_data)
-    schedule.every().wednesday.at(UTC_DAILY_REFRESH).do(save_market_data)
-    schedule.every().thursday.at(UTC_DAILY_REFRESH).do(save_market_data)
-    schedule.every().friday.at(UTC_DAILY_REFRESH).do(save_market_data)
+    def _utc_to_local_hhmm(hh: int, mm: int) -> str:
+        """Convert a UTC HH:MM slot into the host's local-clock HH:MM
+        so that schedule.at(...) fires at the intended UTC moment."""
+        today = datetime.now(timezone.utc).date()
+        utc_dt = datetime.combine(today, dtime(hour=hh, minute=mm), tzinfo=timezone.utc)
+        local_dt = utc_dt.astimezone()  # uses host TZ
+        return local_dt.strftime("%H:%M")
 
-    schedule.every().monday.at(UTC_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
-    schedule.every().tuesday.at(UTC_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
-    schedule.every().wednesday.at(UTC_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
-    schedule.every().thursday.at(UTC_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
-    schedule.every().friday.at(UTC_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
-    schedule.every().saturday.at(UTC_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
+    LOCAL_DAILY_REFRESH = _utc_to_local_hhmm(*UTC_DAILY_REFRESH_HHMM)
+    LOCAL_NIGHTLY_ALPHA = _utc_to_local_hhmm(*UTC_NIGHTLY_ALPHA_HHMM)
+
+    schedule.every().monday.at(LOCAL_DAILY_REFRESH).do(save_market_data)
+    schedule.every().tuesday.at(LOCAL_DAILY_REFRESH).do(save_market_data)
+    schedule.every().wednesday.at(LOCAL_DAILY_REFRESH).do(save_market_data)
+    schedule.every().thursday.at(LOCAL_DAILY_REFRESH).do(save_market_data)
+    schedule.every().friday.at(LOCAL_DAILY_REFRESH).do(save_market_data)
+
+    schedule.every().monday.at(LOCAL_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
+    schedule.every().tuesday.at(LOCAL_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
+    schedule.every().wednesday.at(LOCAL_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
+    schedule.every().thursday.at(LOCAL_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
+    schedule.every().friday.at(LOCAL_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
+    schedule.every().saturday.at(LOCAL_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
 
     # Run initial update if no fresh data exists
     if not is_data_fresh():
@@ -186,10 +199,11 @@ def run_scheduler():
         save_market_data()
 
     logger.info(
-        "Scheduler configured.  Daily market refresh at %s UTC (Mon-Fri); "
-        "nightly alpha-engine + backtest at %s UTC (Mon-Sat).",
-        UTC_DAILY_REFRESH,
-        UTC_NIGHTLY_ALPHA,
+        "Scheduler configured.  Daily market refresh at %02d:%02d UTC "
+        "(local %s, Mon-Fri); nightly alpha-engine + backtest at "
+        "%02d:%02d UTC (local %s, Mon-Sat).",
+        UTC_DAILY_REFRESH_HHMM[0], UTC_DAILY_REFRESH_HHMM[1], LOCAL_DAILY_REFRESH,
+        UTC_NIGHTLY_ALPHA_HHMM[0], UTC_NIGHTLY_ALPHA_HHMM[1], LOCAL_NIGHTLY_ALPHA,
     )
     
     while True:
