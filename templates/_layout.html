@@ -147,7 +147,19 @@
             if (status) status.textContent = 'Alpha refresh started' + mode + '. Reload pages in a few minutes.';
             try {
                 const url = '{{ url_for("refresh_alpha") }}' + (includeBacktest ? '?include_backtest=1' : '');
-                await fetch(url, {method: 'POST'});
+                const resp = await fetch(url, {method: 'POST'});
+                let body = {};
+                try { body = await resp.json(); } catch (_) {}
+                if (status) {
+                    if (body && body.skipped) {
+                        status.innerHTML = '<i class="fas fa-info-circle text-warning me-1"></i>'
+                            + 'Refresh skipped: another refresh is already in progress. '
+                            + 'Try again once the current run finishes.';
+                    } else if (body && body.started) {
+                        status.textContent = 'Alpha refresh started' + mode
+                            + '. Reload pages in a few minutes.';
+                    }
+                }
             } catch (e) {
                 if (status) status.textContent = 'Failed to start refresh: ' + e;
             }

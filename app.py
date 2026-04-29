@@ -309,6 +309,19 @@ def refresh_alpha():
         or request.args.get("include_backtest") == "1"
     )
 
+    # Cheap pre-check: if the refresh lock is currently held, surface
+    # that to the UI immediately rather than firing a thread that will
+    # silently no-op.  This is racy (the lock can be released between
+    # the check and the thread start) but in that case the worker just
+    # runs normally; we never falsely report "skipped" without reason.
+    from alpha_cache import refresh_lock
+    if refresh_lock.locked():
+        return jsonify({
+            "started": False,
+            "skipped": "another refresh in progress",
+            "include_backtest": include_backtest,
+        })
+
     def _run():
         try:
             refresh_alpha_data(include_backtest=include_backtest)

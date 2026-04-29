@@ -68,8 +68,14 @@ def _insider_summary(ticker: yf.Ticker) -> dict:
         else:
             return {"insider_buys_90d": 0, "insider_sells_90d": 0, "insider_net_value_90d": 0.0}
 
+        # Normalize timezone safely: yfinance can return either tz-aware
+        # or tz-naive datetimes depending on cache state, so we strip
+        # the timezone only if one is present.  The cutoff is computed
+        # tz-naive on both sides to avoid mixed-tz comparison errors.
         cutoff = pd.Timestamp.utcnow().tz_localize(None) - pd.Timedelta(days=90)
-        df = df[df["Date"].dt.tz_localize(None) >= cutoff]
+        if df["Date"].dt.tz is not None:
+            df["Date"] = df["Date"].dt.tz_convert("UTC").dt.tz_localize(None)
+        df = df[df["Date"].notna() & (df["Date"] >= cutoff)]
 
         buys = sells = 0
         net_value = 0.0
