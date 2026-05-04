@@ -351,8 +351,11 @@ def portfolio():
                 "total_value": float(portfolio_summary.get("total_value") or 0.0),
                 "cash_balance": float(portfolio_summary.get("cash_balance") or 0.0),
                 "position_value": float(portfolio_summary.get("position_value") or 0.0),
+                # Recompute realized PnL from the latest closed trades so
+                # same-day closes before the EOD snapshot job aren't stale.
                 "realized_pnl_cum": (
-                    equity_series[-1]["realized_pnl_cum"] if equity_series else 0.0
+                    closed_trades[-1]["cumulative_pnl"] if closed_trades
+                    else (equity_series[-1]["realized_pnl_cum"] if equity_series else 0.0)
                 ),
                 "unrealized_pnl": sum(
                     (p.get("pnl") or 0.0) for p in (portfolio_summary.get("positions") or [])
