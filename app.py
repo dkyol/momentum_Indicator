@@ -29,7 +29,6 @@ from portfolio_stats import (
     compute_strategy_stats,
     get_closed_trade_history,
     get_equity_series,
-    take_equity_snapshot,
     INITIAL_INVESTMENT,
 )
 
