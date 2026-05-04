@@ -17,7 +17,21 @@ A second analytics layer focused on idea discovery rather than monitoring:
 * **Signal backtester** (`backtester.py`) – 3-year holding-period replay (10 trading-day hold) of **eight** signals: the 5 setups, a price-based value_only proxy (>30% below 52w high while above 200dma), an rs_only proxy (top-quintile 12m return cross-sectionally), and a full edge_score_proxy (value AND rs AND any setup).  Reports trades, hit rate, mean / median / best / worst return, and **max drawdown** (additive cumulative-PnL drawdown in percentage points).
 * **Orchestrator** (`alpha_engine.py`) – `refresh_alpha_data(include_backtest=False)`; bootstrapped in a background thread on first app start, refreshed nightly via `scheduler.py`, and triggerable from the navbar "Refresh alpha" button.
 * **Routes**: `/opportunities`, `/value`, `/setups`, `/sectors`, `/catalysts`, `/backtest` (all wrapped by `templates/_layout.html` with a regime banner).
-* **Cache files**: `cached_fundamentals.json`, `cached_value_screen.json`, `cached_relative_strength.json`, `cached_setups.json`, `cached_market_regime.json`, `cached_catalysts.json`, `cached_edge_score.json`, `cached_backtest.json`, `cached_alpha_meta.json` (last-refreshed timestamps).
+* **Cache files**: `cached_fundamentals.json`, `cached_value_screen.json`, `cached_relative_strength.json`, `cached_setups.json`, `cached_market_regime.json`, `cached_catalysts.json`, `cached_edge_score.json`, `cached_backtest.json`, `cached_alpha_meta.json` (last-refreshed timestamps), plus `cached_rvol.json` (intraday time-adjusted Relative Volume, refreshed every 15 minutes during US market hours).
+* **Cache backing store**: every `cached_*.json` file is mirrored to a Postgres `alpha_cache` table by `alpha_cache.save_json` / `load_json`. The DB row takes precedence on read, so a Scheduled Deployment writer's update is immediately visible to every Autoscale web instance even though they don't share a filesystem.
+
+## Production scheduling (Autoscale + Scheduled Deployments)
+
+The Autoscale web tier (`gunicorn main:app`) does **not** run the in-process scheduler. Instead, three Replit Scheduled Deployments call entry-point scripts under `scripts/`:
+
+| Script | Purpose | Recommended cron (UTC) |
+|---|---|---|
+| `python scripts/refresh_rvol.py`     | Intraday time-adjusted RVOL snapshot | `*/15 13-21 * * 1-5` |
+| `python scripts/refresh_alpha.py`    | Daily fundamentals/value/RS/setups/regime/catalysts/edge refresh | `5 14 * * 1-5` |
+| `python scripts/refresh_alpha.py --with-backtest` | Nightly full pipeline incl. backtest | `30 3 * * 2-7` |
+| `python scripts/equity_snapshot.py`  | EOD equity snapshot for the portfolio dashboard | `10 21 * * 1-5` |
+
+`scripts/seed_alpha_cache_db.py` is a one-shot helper that copies the local `cached_*.json` files into the DB — useful right after deploying the DB-backed cache layer or after a manual local refresh.
 
 # User Preferences
 

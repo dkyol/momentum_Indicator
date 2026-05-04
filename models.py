@@ -54,6 +54,23 @@ class TradingLog(Base):
     log_type = Column(String(20), default='INFO')  # 'INFO', 'ERROR', 'TRADE'
 
 
+class AlphaCache(Base):
+    """Key/value store for the alpha JSON caches.
+
+    Replaces the local-disk JSON files when running on multi-instance
+    Autoscale deployments: every web instance reads the same row, and
+    the Scheduled Deployment writers update one shared row.  The
+    ``alpha_cache.save_json`` / ``load_json`` helpers transparently
+    use this table when ``DATABASE_URL`` is reachable, with the local
+    JSON file kept as a write-through fallback.
+    """
+    __tablename__ = 'alpha_cache'
+
+    key = Column(String(64), primary_key=True)
+    value = Column(Text, nullable=False)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 class EquitySnapshot(Base):
     """Daily end-of-day snapshot of total account equity.
 
