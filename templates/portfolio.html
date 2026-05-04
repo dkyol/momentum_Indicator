@@ -102,6 +102,47 @@
 </div>
 {% endif %}
 
+{# ---------------- Active Positions (kept high so the open book is the first thing you see) ---------------- #}
+<div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0"><i class="fas fa-briefcase me-2"></i>Active Positions</h5></div>
+    <div class="card-body p-0">
+    {% if portfolio_summary and portfolio_summary.positions %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Symbol</th><th>Quantity</th><th>Avg Cost</th>
+                        <th>Current</th><th>Value</th><th>P&L</th><th>P&L %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for p in portfolio_summary.positions %}
+                    <tr>
+                        <td><strong class="text-primary">{{ p.symbol }}</strong></td>
+                        <td>{{ "%.4f"|format(p.quantity) }}</td>
+                        <td>${{ "%.2f"|format(p.avg_cost) }}</td>
+                        <td>${{ "%.2f"|format(p.current_price) }}</td>
+                        <td>${{ "%.2f"|format(p.position_value) }}</td>
+                        <td class="{% if p.pnl >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                            {{ '+' if p.pnl >= 0 else '' }}${{ "%.2f"|format(p.pnl) }}
+                        </td>
+                        <td class="{% if p.pnl_pct >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                            {{ '+' if p.pnl_pct >= 0 else '' }}{{ "%.2f"|format(p.pnl_pct) }}%
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="p-4 text-center text-muted">
+            <i class="fas fa-circle-notch fa-2x mb-2"></i>
+            <div>No open positions right now.</div>
+        </div>
+    {% endif %}
+    </div>
+</div>
+
 {# ---------------- Strategy stats ---------------- #}
 {% if stats.n_trades > 0 %}
 <div class="card mb-4">
@@ -171,68 +212,45 @@
 </div>
 {% endif %}
 
-{# ---------------- Active Positions ---------------- #}
-<div class="card mb-4">
-    <div class="card-header"><h5 class="mb-0"><i class="fas fa-briefcase me-2"></i>Active Positions</h5></div>
-    <div class="card-body p-0">
-    {% if portfolio_summary and portfolio_summary.positions %}
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Symbol</th><th>Quantity</th><th>Avg Cost</th>
-                        <th>Current</th><th>Value</th><th>P&L</th><th>P&L %</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for p in portfolio_summary.positions %}
-                    <tr>
-                        <td><strong class="text-primary">{{ p.symbol }}</strong></td>
-                        <td>{{ "%.4f"|format(p.quantity) }}</td>
-                        <td>${{ "%.2f"|format(p.avg_cost) }}</td>
-                        <td>${{ "%.2f"|format(p.current_price) }}</td>
-                        <td>${{ "%.2f"|format(p.position_value) }}</td>
-                        <td class="{% if p.pnl >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
-                            {{ '+' if p.pnl >= 0 else '' }}${{ "%.2f"|format(p.pnl) }}
-                        </td>
-                        <td class="{% if p.pnl_pct >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
-                            {{ '+' if p.pnl_pct >= 0 else '' }}{{ "%.2f"|format(p.pnl_pct) }}%
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <div class="p-4 text-center text-muted">
-            <i class="fas fa-circle-notch fa-2x mb-2"></i>
-            <div>No open positions right now.</div>
-        </div>
-    {% endif %}
-    </div>
-</div>
-
-{# ---------------- Closed-trade history ---------------- #}
+{# ---------------- Closed-trade history (sortable) ---------------- #}
 <div class="card mb-4">
     <div class="card-header d-flex align-items-center">
         <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Closed Trade History</h5>
         <span class="badge bg-secondary ms-2">{{ closed_trades|length }} trades</span>
+        <small class="text-muted ms-auto">Click any column header to sort</small>
     </div>
     <div class="card-body p-0">
     {% if closed_trades %}
         <div class="table-responsive">
-            <table class="table table-sm table-hover mb-0">
+            <table class="table table-sm table-hover mb-0" id="closedTradesTable">
                 <thead class="table-dark">
                     <tr>
-                        <th>Date</th><th>Symbol</th><th>Entry</th><th>Exit</th>
-                        <th>Qty</th><th>Hold (d)</th><th>P&L</th><th>P&L %</th>
-                        <th data-bs-toggle="tooltip" title="Cumulative realized PnL after this trade">Cum. PnL</th>
-                        <th>Reason</th>
+                        <th class="sortable" data-sort-key="date" data-sort-type="string" style="cursor:pointer">Date <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" data-sort-key="symbol" data-sort-type="string" style="cursor:pointer">Symbol <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" data-sort-key="entry" data-sort-type="number" style="cursor:pointer">Entry <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" data-sort-key="exit" data-sort-type="number" style="cursor:pointer">Exit <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" data-sort-key="qty" data-sort-type="number" style="cursor:pointer">Qty <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" data-sort-key="hold" data-sort-type="number" style="cursor:pointer">Hold (d) <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" data-sort-key="pnl" data-sort-type="number" style="cursor:pointer">P&L <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" data-sort-key="pnlpct" data-sort-type="number" style="cursor:pointer">P&L % <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" data-sort-key="cum" data-sort-type="number" style="cursor:pointer"
+                            data-bs-toggle="tooltip" title="Cumulative realized PnL after this trade">Cum. PnL <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" data-sort-key="reason" data-sort-type="string" style="cursor:pointer">Reason <i class="fas fa-sort text-muted small"></i></th>
                     </tr>
                 </thead>
                 <tbody>
                 {% for t in closed_trades_reversed %}
-                    <tr class="{% if t.pnl > 0 %}table-success{% elif t.pnl < 0 %}table-danger{% endif %}">
+                    <tr class="{% if t.pnl > 0 %}table-success{% elif t.pnl < 0 %}table-danger{% endif %}"
+                        data-date="{{ t.timestamp or '' }}"
+                        data-symbol="{{ t.symbol or '' }}"
+                        data-entry="{{ t.entry_price if t.entry_price is not none else '' }}"
+                        data-exit="{{ t.exit_price }}"
+                        data-qty="{{ t.quantity }}"
+                        data-hold="{{ t.hold_days if t.hold_days is not none else '' }}"
+                        data-pnl="{{ t.pnl }}"
+                        data-pnlpct="{{ t.pnl_pct if t.pnl_pct is not none else '' }}"
+                        data-cum="{{ t.cumulative_pnl }}"
+                        data-reason="{{ t.reason or '' }}">
                         <td class="small">{{ t.timestamp[:10] if t.timestamp else 'N/A' }}</td>
                         <td><strong>{{ t.symbol }}</strong></td>
                         <td>{% if t.entry_price %}${{ "%.2f"|format(t.entry_price) }}{% else %}—{% endif %}</td>
@@ -266,6 +284,68 @@
 {% endblock %}
 
 {% block scripts %}
+{# ---------------- Closed-trade table sorting ---------------- #}
+<script>
+(function() {
+    const table = document.getElementById('closedTradesTable');
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+    const headers = table.querySelectorAll('th.sortable');
+    let currentKey = null;
+    let currentDir = 'desc'; // default to descending so e.g. PnL big-first
+
+    function cmp(a, b, key, type, dir) {
+        let va = a.dataset[key];
+        let vb = b.dataset[key];
+        // Push empty/missing values to the bottom regardless of direction
+        const aEmpty = (va === '' || va == null);
+        const bEmpty = (vb === '' || vb == null);
+        if (aEmpty && bEmpty) return 0;
+        if (aEmpty) return 1;
+        if (bEmpty) return -1;
+        if (type === 'number') {
+            va = parseFloat(va);
+            vb = parseFloat(vb);
+            if (isNaN(va) && isNaN(vb)) return 0;
+            if (isNaN(va)) return 1;
+            if (isNaN(vb)) return -1;
+        } else {
+            va = String(va).toLowerCase();
+            vb = String(vb).toLowerCase();
+        }
+        if (va < vb) return dir === 'asc' ? -1 : 1;
+        if (va > vb) return dir === 'asc' ? 1 : -1;
+        return 0;
+    }
+
+    function applySort(key, type) {
+        if (currentKey === key) {
+            currentDir = currentDir === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentKey = key;
+            currentDir = 'desc';
+        }
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        rows.sort((a, b) => cmp(a, b, key, type, currentDir));
+        rows.forEach(r => tbody.appendChild(r));
+
+        headers.forEach(h => {
+            const icon = h.querySelector('i');
+            if (!icon) return;
+            if (h.dataset.sortKey === key) {
+                icon.className = 'fas ' + (currentDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down') + ' text-light small';
+            } else {
+                icon.className = 'fas fa-sort text-muted small';
+            }
+        });
+    }
+
+    headers.forEach(h => {
+        h.addEventListener('click', () => applySort(h.dataset.sortKey, h.dataset.sortType));
+    });
+})();
+</script>
+
 {% if equity_series %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
