@@ -342,7 +342,10 @@
                             <i class="fas fa-chart-pie me-2"></i>
                             Paper Trading Portfolio
                         </h5>
-                        <span class="badge bg-warning ms-auto">$10,000 Initial Investment</span>
+                        <span class="badge bg-warning ms-2">$10,000 Initial Investment</span>
+                        <a href="{{ url_for('portfolio') }}" class="btn btn-sm btn-outline-primary ms-auto">
+                            <i class="fas fa-chart-line me-1"></i>Full performance
+                        </a>
                     </div>
                     <div class="card-body">
                         {% if portfolio_summary %}
@@ -429,63 +432,11 @@
                         </div>
                         {% endif %}
 
-                        <!-- Trade Journal Section -->
-                        {% if portfolio_summary and portfolio_summary.recent_trades %}
-                        <div class="mt-4">
-                            <h6 class="mb-3">
-                                <i class="fas fa-clipboard-list me-2"></i>
-                                Recent Trade Journal
-                            </h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>Time</th>
-                                            <th>Symbol</th>
-                                            <th>Type</th>
-                                            <th>Entry Price</th>
-                                            <th>Exit Price</th>
-                                            <th>Quantity</th>
-                                            <th>P&L</th>
-                                            <th>Reason</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for trade in portfolio_summary.recent_trades %}
-                                        <tr class="{% if trade.trade_type == 'BUY' %}table-info{% else %}{% if trade.pnl > 0 %}table-success{% else %}table-danger{% endif %}{% endif %}">
-                                            <td class="small">{{ trade.timestamp.strftime('%m/%d %I:%M %p') if trade.timestamp else 'N/A' }}</td>
-                                            <td><strong>{{ trade.symbol }}</strong></td>
-                                            <td>
-                                                <span class="badge {% if trade.trade_type == 'BUY' %}bg-info{% else %}bg-warning{% endif %}">
-                                                    {{ trade.trade_type }}
-                                                </span>
-                                            </td>
-                                            <td>${{ "%.2f"|format(trade.entry_price if trade.entry_price else trade.price) }}</td>
-                                            <td>
-                                                {% if trade.trade_type == 'SELL' %}
-                                                    ${{ "%.2f"|format(trade.price) }}
-                                                {% else %}
-                                                    -
-                                                {% endif %}
-                                            </td>
-                                            <td>{{ "%.3f"|format(trade.quantity) }}</td>
-                                            <td>
-                                                {% if trade.pnl != 0 %}
-                                                    <span class="{% if trade.pnl > 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
-                                                        ${{ "%.2f"|format(trade.pnl) }}
-                                                    </span>
-                                                {% else %}
-                                                    -
-                                                {% endif %}
-                                            </td>
-                                            <td class="small">{{ trade.reason|replace('_', ' ')|title }}</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
+                        <div class="text-end mt-2">
+                            <a href="{{ url_for('portfolio') }}" class="text-decoration-none small">
+                                See full trade history & equity curve <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
                         </div>
-                        {% endif %}
 
                         <div class="card-footer text-muted mt-3">
                             <div class="row">

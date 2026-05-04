@@ -24,6 +24,14 @@ from setups import get_cached_setups
 from value_screener import get_cached_value_screen
 from catalysts import get_cached_catalysts
 from backtester import get_cached_backtest
+from portfolio_stats import (
+    backfill_snapshots_from_trades,
+    compute_strategy_stats,
+    get_closed_trade_history,
+    get_equity_series,
+    take_equity_snapshot,
+    INITIAL_INVESTMENT,
+)
 
 # Import trader after app initialization to avoid circular imports
 trader = None
@@ -291,6 +299,92 @@ def backtest():
         universe_size=payload.get("universe_size"),
         regime=_regime_for_template(),
         meta=get_alpha_meta(),
+    )
+
+
+@app.route("/portfolio")
+@login_required
+def portfolio():
+    """Portfolio performance dashboard - cumulative effect of running the strategy.
+
+    Pulls active positions via the existing trader summary, builds the
+    equity-snapshot series (backfilling from trade history on first load
+    so the chart isn't blank), and computes the headline KPIs.
+    """
+    portfolio_summary = None
+    try:
+        global trader
+        if trader is None:
+            from paper_trader import trader as global_trader
+            trader = global_trader
+        portfolio_summary = trader.get_portfolio_summary()
+    except Exception as e:
+        app.logger.error(f"Error getting portfolio summary for /portfolio: {e}")
+        portfolio_summary = None
+
+    try:
+        backfill_snapshots_from_trades()
+    except Exception as e:
+        app.logger.error(f"Equity backfill failed: {e}")
+
+    try:
+        equity_series = get_equity_series()
+    except Exception as e:
+        app.logger.error(f"get_equity_series failed: {e}")
+        equity_series = []
+
+    try:
+        closed_trades = get_closed_trade_history()
+    except Exception as e:
+        app.logger.error(f"get_closed_trade_history failed: {e}")
+        closed_trades = []
+
+    # If we have an open trader summary today, merge today's live total
+    # into the equity series so the chart's last point is fresh, even if
+    # the daily snapshot job hasn't fired yet.
+    if portfolio_summary and portfolio_summary.get("total_value") is not None:
+        try:
+            import pytz as _pytz
+            today_iso = datetime.now(_pytz.timezone("US/Eastern")).strftime("%Y-%m-%d")
+            live_row = {
+                "date": today_iso,
+                "total_value": float(portfolio_summary.get("total_value") or 0.0),
+                "cash_balance": float(portfolio_summary.get("cash_balance") or 0.0),
+                "position_value": float(portfolio_summary.get("position_value") or 0.0),
+                "realized_pnl_cum": (
+                    equity_series[-1]["realized_pnl_cum"] if equity_series else 0.0
+                ),
+                "unrealized_pnl": sum(
+                    (p.get("pnl") or 0.0) for p in (portfolio_summary.get("positions") or [])
+                ),
+                "n_open_positions": len(portfolio_summary.get("positions") or []),
+                "source": "live",
+            }
+            if equity_series and equity_series[-1]["date"] == today_iso:
+                equity_series[-1] = live_row
+            else:
+                equity_series.append(live_row)
+        except Exception as e:
+            app.logger.error(f"Live equity merge failed: {e}")
+
+    try:
+        stats = compute_strategy_stats(closed_trades, equity_series)
+    except Exception as e:
+        app.logger.error(f"compute_strategy_stats failed: {e}")
+        stats = compute_strategy_stats([], [])
+
+    return render_template(
+        "portfolio.html",
+        portfolio_summary=portfolio_summary,
+        equity_series=equity_series,
+        closed_trades=closed_trades,
+        closed_trades_reversed=list(reversed(closed_trades)),
+        stats=stats,
+        initial_investment=INITIAL_INVESTMENT,
+        last_snapshot_date=(equity_series[-1]["date"] if equity_series else None),
+        has_backfill=any(r.get("source") == "backfill" for r in equity_series),
+        strategy_label="Momentum top-2 (paper)",
+        regime=_regime_for_template(),
     )
 
 

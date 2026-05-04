@@ -53,6 +53,27 @@ class TradingLog(Base):
     message = Column(Text, nullable=False)
     log_type = Column(String(20), default='INFO')  # 'INFO', 'ERROR', 'TRADE'
 
+
+class EquitySnapshot(Base):
+    """Daily end-of-day snapshot of total account equity.
+
+    One row per trading day.  Used to render the portfolio equity
+    curve and compute drawdown.  Designed to be strategy-agnostic so
+    a future Edge-Score-driven trader can write to the same table.
+    """
+    __tablename__ = 'equity_snapshots'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    snapshot_date = Column(String(10), nullable=False, unique=True, index=True)  # YYYY-MM-DD (US/Eastern)
+    captured_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    cash_balance = Column(Float, nullable=False, default=0.0)
+    position_value = Column(Float, nullable=False, default=0.0)
+    total_value = Column(Float, nullable=False, default=0.0)
+    realized_pnl_cum = Column(Float, nullable=False, default=0.0)  # Sum of all SELL pnl up to this date
+    unrealized_pnl = Column(Float, nullable=False, default=0.0)
+    n_open_positions = Column(Integer, nullable=False, default=0)
+    source = Column(String(20), nullable=False, default='live')  # 'live' or 'backfill'
+
 # Database setup
 def create_tables():
     """Create all database tables"""

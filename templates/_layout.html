@@ -61,6 +61,12 @@
                             <i class="fas fa-history me-1"></i>Backtest
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint=='portfolio' %}active fw-bold{% endif %}"
+                           href="{{ url_for('portfolio') }}">
+                            <i class="fas fa-chart-pie me-1"></i>Portfolio
+                        </a>
+                    </li>
                 </ul>
                 <div class="d-flex align-items-center gap-2">
                     <div class="btn-group btn-group-sm">

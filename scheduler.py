@@ -15,6 +15,7 @@ from stock_analytics import get_high_volume_data
 from momentum_analyzer import get_momentum_summary
 from sma_analyzer import get_sma_summary
 from alpha_engine import refresh_alpha_data
+from portfolio_stats import take_equity_snapshot
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -149,6 +150,25 @@ def refresh_alpha_with_backtest():
         logger.error(f"Nightly alpha refresh failed: {e}")
 
 
+def daily_equity_snapshot():
+    """Capture the end-of-day equity snapshot for the paper-trading book.
+
+    Imports the trader lazily so this scheduler module stays importable
+    even before the trader is initialised, and reuses the trader's own
+    yfinance-backed price helper to mark open positions to market.
+    """
+    try:
+        from paper_trader import trader as _trader
+        price_fn = _trader.get_current_price if _trader else None
+    except Exception as e:
+        logger.error(f"Could not load paper trader for equity snapshot: {e}")
+        price_fn = None
+    try:
+        take_equity_snapshot(get_current_price=price_fn)
+    except Exception as e:
+        logger.error(f"Daily equity snapshot failed: {e}")
+
+
 def run_scheduler():
     """
     Run the scheduler to update market data daily at 10:05 AM EST.
@@ -168,6 +188,8 @@ def run_scheduler():
     # hosts run on UTC where this is a no-op.
     UTC_DAILY_REFRESH_HHMM = (15, 5)
     UTC_NIGHTLY_ALPHA_HHMM = (3, 30)
+    # 21:10 UTC -> 16:10 EST / 17:10 EDT, always after the 4 PM US close.
+    UTC_EOD_SNAPSHOT_HHMM = (21, 10)
 
     def _utc_to_local_hhmm(hh: int, mm: int) -> str:
         """Convert a UTC HH:MM slot into the host's local-clock HH:MM
@@ -179,6 +201,7 @@ def run_scheduler():
 
     LOCAL_DAILY_REFRESH = _utc_to_local_hhmm(*UTC_DAILY_REFRESH_HHMM)
     LOCAL_NIGHTLY_ALPHA = _utc_to_local_hhmm(*UTC_NIGHTLY_ALPHA_HHMM)
+    LOCAL_EOD_SNAPSHOT = _utc_to_local_hhmm(*UTC_EOD_SNAPSHOT_HHMM)
 
     schedule.every().monday.at(LOCAL_DAILY_REFRESH).do(save_market_data)
     schedule.every().tuesday.at(LOCAL_DAILY_REFRESH).do(save_market_data)
@@ -193,6 +216,13 @@ def run_scheduler():
     schedule.every().friday.at(LOCAL_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
     schedule.every().saturday.at(LOCAL_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
 
+    # End-of-day equity snapshot for the portfolio dashboard (Mon-Fri).
+    schedule.every().monday.at(LOCAL_EOD_SNAPSHOT).do(daily_equity_snapshot)
+    schedule.every().tuesday.at(LOCAL_EOD_SNAPSHOT).do(daily_equity_snapshot)
+    schedule.every().wednesday.at(LOCAL_EOD_SNAPSHOT).do(daily_equity_snapshot)
+    schedule.every().thursday.at(LOCAL_EOD_SNAPSHOT).do(daily_equity_snapshot)
+    schedule.every().friday.at(LOCAL_EOD_SNAPSHOT).do(daily_equity_snapshot)
+
     # Run initial update if no fresh data exists
     if not is_data_fresh():
         logger.info("No fresh data found, running initial update...")
@@ -201,9 +231,11 @@ def run_scheduler():
     logger.info(
         "Scheduler configured.  Daily market refresh at %02d:%02d UTC "
         "(local %s, Mon-Fri); nightly alpha-engine + backtest at "
-        "%02d:%02d UTC (local %s, Mon-Sat).",
+        "%02d:%02d UTC (local %s, Mon-Sat); EOD equity snapshot at "
+        "%02d:%02d UTC (local %s, Mon-Fri).",
         UTC_DAILY_REFRESH_HHMM[0], UTC_DAILY_REFRESH_HHMM[1], LOCAL_DAILY_REFRESH,
         UTC_NIGHTLY_ALPHA_HHMM[0], UTC_NIGHTLY_ALPHA_HHMM[1], LOCAL_NIGHTLY_ALPHA,
+        UTC_EOD_SNAPSHOT_HHMM[0], UTC_EOD_SNAPSHOT_HHMM[1], LOCAL_EOD_SNAPSHOT,
     )
     
     while True:
