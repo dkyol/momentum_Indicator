@@ -67,7 +67,7 @@ _DEFAULT_UNIVERSE: list[tuple[str, str]] = [
     ("IBM", "Information Technology"), ("TXN", "Information Technology"),
     ("MU", "Information Technology"), ("AMAT", "Information Technology"),
     ("NOW", "Information Technology"), ("INTU", "Information Technology"),
-    ("PANW", "Information Technology"), ("SMCI", "Information Technology"),
+    ("PANW", "Information Technology"),
     ("KLAC", "Information Technology"), ("LRCX", "Information Technology"),
     ("ADI", "Information Technology"), ("ANET", "Information Technology"),
     ("CDNS", "Information Technology"), ("SNPS", "Information Technology"),
@@ -94,7 +94,7 @@ _DEFAULT_UNIVERSE: list[tuple[str, str]] = [
     ("OMC", "Communication Services"), ("IPG", "Communication Services"),
     ("FOX", "Communication Services"), ("ASTS", "Communication Services"),
     # Consumer Discretionary (~30)
-    ("AMZN", "Consumer Discretionary"), ("TSLA", "Consumer Discretionary"),
+    ("TSLA", "Consumer Discretionary"),
     ("HD", "Consumer Discretionary"), ("MCD", "Consumer Discretionary"),
     ("NKE", "Consumer Discretionary"), ("SBUX", "Consumer Discretionary"),
     ("LOW", "Consumer Discretionary"), ("BKNG", "Consumer Discretionary"),
@@ -164,7 +164,7 @@ _DEFAULT_UNIVERSE: list[tuple[str, str]] = [
     ("HBAN", "Financials"), ("CFG", "Financials"),
     ("NTRS", "Financials"), ("STT", "Financials"),
     ("BK", "Financials"), ("DFS", "Financials"),
-    ("HOOD", "Financials"), ("COIN", "Financials"),
+    ("HOOD", "Financials"),
     ("OPFI", "Financials"),
     # Industrials (~30)
     ("CAT", "Industrials"), ("BA", "Industrials"),
@@ -211,7 +211,10 @@ _DEFAULT_UNIVERSE: list[tuple[str, str]] = [
     ("O", "Real Estate"), ("WELL", "Real Estate"),
     ("DLR", "Real Estate"), ("AVB", "Real Estate"),
     # Specialty / high-momentum names retained from the original watchlist
-    ("IONQ", "Information Technology"), ("RBRK", "Information Technology"),
+    ("IONQ", "Information Technology"),
+    ("LUNR", "Industrials"), ("RKLB", "Industrials"),
+    ("VRT", "Industrials"), ("RDW", "Industrials"),
+    ("PL", "Information Technology"),
 ]
 
 
