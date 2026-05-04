@@ -16,6 +16,7 @@ from momentum_analyzer import get_momentum_summary
 from sma_analyzer import get_sma_summary
 from alpha_engine import refresh_alpha_data
 from portfolio_stats import take_equity_snapshot
+from rvol import save_rvol_snapshot, is_market_hours as _rvol_market_hours
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -150,6 +151,21 @@ def refresh_alpha_with_backtest():
         logger.error(f"Nightly alpha refresh failed: {e}")
 
 
+def intraday_rvol_refresh():
+    """Recompute time-adjusted RVOL during US market hours.
+
+    Runs every 15 minutes via the scheduler.  ``save_rvol_snapshot``
+    self-guards against off-hours invocations so the tick is essentially
+    a no-op outside 09:30-16:00 EST Mon-Fri.
+    """
+    try:
+        if not _rvol_market_hours():
+            return
+        save_rvol_snapshot()
+    except Exception as e:
+        logger.error(f"Intraday RVOL refresh failed: {e}")
+
+
 def daily_equity_snapshot():
     """Capture the end-of-day equity snapshot for the paper-trading book.
 
@@ -222,6 +238,11 @@ def run_scheduler():
     schedule.every().wednesday.at(LOCAL_EOD_SNAPSHOT).do(daily_equity_snapshot)
     schedule.every().thursday.at(LOCAL_EOD_SNAPSHOT).do(daily_equity_snapshot)
     schedule.every().friday.at(LOCAL_EOD_SNAPSHOT).do(daily_equity_snapshot)
+
+    # Intraday time-adjusted RVOL refresh — every 15 minutes; the job
+    # itself short-circuits outside US market hours so it's safe to
+    # leave running 24/7.
+    schedule.every(15).minutes.do(intraday_rvol_refresh)
 
     # Run initial update if no fresh data exists
     if not is_data_fresh():

@@ -21,6 +21,7 @@ from edge_score import get_cached_edge_scores
 from market_regime import get_cached_market_regime
 from relative_strength import get_cached_relative_strength, get_rs_rating_map
 from setups import get_cached_setups
+from rvol import get_cached_rvol, get_cached_rvol_meta, save_rvol_snapshot
 from value_screener import get_cached_value_screen
 from catalysts import get_cached_catalysts
 from backtester import get_cached_backtest
@@ -244,11 +245,32 @@ def value():
 def setups():
     rows = get_cached_setups()
     rows = [r for r in rows if r.get("Setup_Count", 0) > 0]
+
+    # Merge intraday time-adjusted RVOL onto each row so the table can
+    # surface "trading hot right now" alongside the daily-bar pattern
+    # flags.  The snapshot is refreshed every 15 minutes during market
+    # hours by the scheduler; outside market hours we still show the
+    # last cached values.
+    rvol_map = get_cached_rvol()
+    for r in rows:
+        rv = rvol_map.get(r.get("Symbol"))
+        if rv:
+            r["RVOL"] = rv.get("rvol")
+            r["RVOL_DollarVol"] = rv.get("dollar_volume")
+            r["RVOL_AsOf"] = rv.get("as_of_bar")
+        else:
+            r["RVOL"] = None
+            r["RVOL_DollarVol"] = None
+            r["RVOL_AsOf"] = None
+
+    rvol_meta = get_cached_rvol_meta()
+
     return render_template(
         "setups.html",
         rows=rows,
         regime=_regime_for_template(),
         meta=get_alpha_meta(),
+        rvol_meta=rvol_meta,
     )
 
 

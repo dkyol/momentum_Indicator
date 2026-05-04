@@ -4,45 +4,80 @@
 <div class="d-flex align-items-center mb-4">
     <h2 class="mb-0"><i class="fas fa-bolt me-2 text-warning"></i>Bullish Technical Setups</h2>
     <small class="text-muted ms-auto">
-        {% if meta and meta.setups %}Last refresh: {{ meta.setups[:19].replace('T',' ') }}{% endif %}
+        {% if meta and meta.setups %}Setups: {{ meta.setups[:19].replace('T',' ') }}{% endif %}
+        {% if rvol_meta and rvol_meta.as_of %}
+            <span class="ms-3">RVOL: {{ rvol_meta.as_of[:19].replace('T',' ') }}</span>
+        {% endif %}
     </small>
 </div>
 
 <p class="text-muted mb-4">
-    Daily-bar pattern detector. Five concrete setups per stock: trend pullback, 52-week breakout,
-    volume thrust, golden cross, and bullish RSI divergence. Stocks with no active setup are hidden.
+    Daily-bar pattern detector plus intraday time-adjusted Relative Volume (RVOL),
+    refreshed every 15 minutes during US market hours. RVOL compares today's
+    cumulative volume against the average cumulative volume up to the same
+    time-of-day over the past {{ 20 }} sessions. Click any column header to sort.
 </p>
 
 {% if rows %}
 <div class="card shadow-lg">
     <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
+        <table class="table table-hover mb-0 align-middle" id="setupsTable">
             <thead class="table-dark">
                 <tr>
-                    <th>Symbol</th>
-                    <th>Sector</th>
-                    <th>Close</th>
-                    <th>RSI(14)</th>
-                    <th data-bs-toggle="tooltip" title="% from 52-week high">% off 52w High</th>
+                    <th class="sortable" data-sort="text">Symbol <i class="fas fa-sort ms-1 text-muted"></i></th>
+                    <th class="sortable" data-sort="text">Sector <i class="fas fa-sort ms-1 text-muted"></i></th>
+                    <th class="sortable" data-sort="number">Close <i class="fas fa-sort ms-1 text-muted"></i></th>
+                    <th class="sortable" data-sort="number">RSI(14) <i class="fas fa-sort ms-1 text-muted"></i></th>
+                    <th class="sortable" data-sort="number" data-bs-toggle="tooltip"
+                        title="% from 52-week high">% off 52w High <i class="fas fa-sort ms-1 text-muted"></i></th>
+                    <th class="sortable" data-sort="number" data-bs-toggle="tooltip"
+                        title="Cumulative volume today vs avg cumulative volume at the same time-of-day (last 20 sessions)">
+                        RVOL <i class="fas fa-sort ms-1 text-muted"></i>
+                    </th>
+                    <th class="sortable" data-sort="number" data-bs-toggle="tooltip"
+                        title="Dollar volume traded so far today (price × cumulative shares)">
+                        $ Vol <i class="fas fa-sort ms-1 text-muted"></i>
+                    </th>
                     <th>Setups</th>
-                    <th>Count</th>
+                    <th class="sortable" data-sort="number">Count <i class="fas fa-sort ms-1 text-muted"></i></th>
                 </tr>
             </thead>
             <tbody>
                 {% for r in rows %}
                 <tr>
-                    <td><strong class="text-primary">{{ r.Symbol }}</strong></td>
-                    <td><small class="text-muted">{{ r.Sector or '—' }}</small></td>
-                    <td>${{ r.Close }}</td>
-                    <td>
+                    <td data-value="{{ r.Symbol }}"><strong class="text-primary">{{ r.Symbol }}</strong></td>
+                    <td data-value="{{ r.Sector or '' }}"><small class="text-muted">{{ r.Sector or '—' }}</small></td>
+                    <td data-value="{{ r.Close }}">${{ r.Close }}</td>
+                    <td data-value="{{ r.RSI_14 if r.RSI_14 is not none else '' }}">
                         <span class="{% if r.RSI_14 is none %}text-muted{% elif r.RSI_14 < 30 %}text-success{% elif r.RSI_14 > 70 %}text-danger{% else %}text-warning{% endif %}">
                             {{ r.RSI_14 if r.RSI_14 is not none else '—' }}
                         </span>
                     </td>
-                    <td>
+                    <td data-value="{{ r.Pct_From_52w_High if r.Pct_From_52w_High is not none else '' }}">
                         <span class="{% if r.Pct_From_52w_High is none %}text-muted{% elif r.Pct_From_52w_High > -2 %}text-success{% elif r.Pct_From_52w_High < -20 %}text-danger{% else %}text-warning{% endif %}">
                             {% if r.Pct_From_52w_High is not none %}{{ r.Pct_From_52w_High }}%{% else %}—{% endif %}
                         </span>
+                    </td>
+                    <td data-value="{{ r.RVOL if r.RVOL is not none else '' }}">
+                        {% if r.RVOL is none %}
+                            <span class="text-muted">—</span>
+                        {% else %}
+                            <span class="fw-bold {% if r.RVOL >= 5 %}text-danger{% elif r.RVOL >= 2 %}text-success{% elif r.RVOL >= 1.5 %}text-warning{% else %}text-muted{% endif %}"
+                                  {% if r.RVOL_AsOf %}title="as of {{ r.RVOL_AsOf }} ET" data-bs-toggle="tooltip"{% endif %}>
+                                {{ r.RVOL }}x
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td data-value="{{ r.RVOL_DollarVol if r.RVOL_DollarVol is not none else '' }}">
+                        {% if r.RVOL_DollarVol is none %}
+                            <span class="text-muted">—</span>
+                        {% elif r.RVOL_DollarVol >= 1000000000 %}
+                            ${{ '%.2f'|format(r.RVOL_DollarVol / 1000000000) }}B
+                        {% elif r.RVOL_DollarVol >= 1000000 %}
+                            ${{ '%.1f'|format(r.RVOL_DollarVol / 1000000) }}M
+                        {% else %}
+                            ${{ '%.0f'|format(r.RVOL_DollarVol / 1000) }}K
+                        {% endif %}
                     </td>
                     <td>
                         {% for s in r.Setups %}
@@ -56,7 +91,7 @@
                             <span class="badge bg-{{ color }} me-1">{{ s.replace('_',' ') }}</span>
                         {% endfor %}
                     </td>
-                    <td><span class="badge bg-dark border">{{ r.Setup_Count }}</span></td>
+                    <td data-value="{{ r.Setup_Count }}"><span class="badge bg-dark border">{{ r.Setup_Count }}</span></td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -69,4 +104,45 @@
     No setups triggered yet, or data is still being prepared.
 </div></div>
 {% endif %}
+
+<script>
+(function() {
+    const table = document.getElementById('setupsTable');
+    if (!table) return;
+    const headers = table.querySelectorAll('th.sortable');
+    headers.forEach((th, idx) => {
+        th.style.cursor = 'pointer';
+        th.addEventListener('click', () => {
+            const tbody = table.tBodies[0];
+            const rows = Array.from(tbody.rows);
+            const type = th.dataset.sort || 'text';
+            const asc = th.dataset.dir !== 'asc';
+            headers.forEach(h => { h.dataset.dir = ''; });
+            th.dataset.dir = asc ? 'asc' : 'desc';
+
+            rows.sort((a, b) => {
+                const av = a.cells[idx].dataset.value ?? a.cells[idx].textContent.trim();
+                const bv = b.cells[idx].dataset.value ?? b.cells[idx].textContent.trim();
+                const aEmpty = av === '' || av === '—';
+                const bEmpty = bv === '' || bv === '—';
+                if (aEmpty && bEmpty) return 0;
+                if (aEmpty) return 1;   // empties always last
+                if (bEmpty) return -1;
+                if (type === 'number') {
+                    return asc ? parseFloat(av) - parseFloat(bv) : parseFloat(bv) - parseFloat(av);
+                }
+                return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+            });
+            rows.forEach(r => tbody.appendChild(r));
+
+            headers.forEach(h => {
+                const i = h.querySelector('i');
+                if (i) i.className = 'fas fa-sort ms-1 text-muted';
+            });
+            const icon = th.querySelector('i');
+            if (icon) icon.className = asc ? 'fas fa-sort-up ms-1' : 'fas fa-sort-down ms-1';
+        });
+    });
+})();
+</script>
 {% endblock %}
