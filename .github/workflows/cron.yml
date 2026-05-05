@@ -1,0 +1,156 @@
+name: Scheduled Refresh
+
+on:
+  schedule:
+    - cron: "*/15 13-21 * * 1-5"   # rvol — every 15 min, 09:00-16:45 EST, Mon-Fri
+    - cron: "5 14 * * 1-5"          # alpha-daily — 10:05 EST, weekdays
+    - cron: "30 3 * * 2-7"          # alpha-nightly — 22:30 EST Mon-Sat night
+    - cron: "10 21 * * 1-5"         # equity — 16:10 EST, weekdays
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which job to run"
+        required: true
+        type: choice
+        options:
+          - rvol
+          - alpha-daily
+          - alpha-nightly
+          - equity
+
+jobs:
+  # ── Job 1: Intraday RVOL refresh ────────────────────────────────────────────
+  rvol:
+    name: RVOL refresh
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: rvol
+      cancel-in-progress: false
+    if: >
+      (github.event_name == 'schedule' && github.event.schedule == '*/15 13-21 * * 1-5') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'rvol')
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run RVOL refresh
+        run: python scripts/refresh_rvol.py
+
+      - name: Notify on failure
+        if: failure() && secrets.FAILURE_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "${{ secrets.FAILURE_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{"text": "❌ RVOL refresh failed — check Actions logs"}'
+
+  # ── Job 2: Daily alpha refresh ───────────────────────────────────────────────
+  alpha-daily:
+    name: Alpha daily
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: alpha
+      cancel-in-progress: false
+    if: >
+      (github.event_name == 'schedule' && github.event.schedule == '5 14 * * 1-5') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'alpha-daily')
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run alpha daily refresh
+        run: python scripts/refresh_alpha.py
+
+      - name: Notify on failure
+        if: failure() && secrets.FAILURE_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "${{ secrets.FAILURE_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{"text": "❌ Alpha daily refresh failed — check Actions logs"}'
+
+  # ── Job 3: Nightly alpha + backtest ─────────────────────────────────────────
+  alpha-nightly:
+    name: Alpha nightly
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: alpha
+      cancel-in-progress: false
+    if: >
+      (github.event_name == 'schedule' && github.event.schedule == '30 3 * * 2-7') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'alpha-nightly')
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run alpha nightly refresh with backtest
+        run: python scripts/refresh_alpha.py --with-backtest
+
+      - name: Notify on failure
+        if: failure() && secrets.FAILURE_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "${{ secrets.FAILURE_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{"text": "❌ Alpha nightly refresh failed — check Actions logs"}'
+
+  # ── Job 4: End-of-day equity snapshot ───────────────────────────────────────
+  equity:
+    name: Equity snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: equity
+      cancel-in-progress: false
+    if: >
+      (github.event_name == 'schedule' && github.event.schedule == '10 21 * * 1-5') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'equity')
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run equity snapshot
+        run: python scripts/equity_snapshot.py
+
+      - name: Notify on failure
+        if: failure() && secrets.FAILURE_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "${{ secrets.FAILURE_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{"text": "❌ Equity snapshot failed — check Actions logs"}'
