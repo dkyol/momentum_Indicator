@@ -215,6 +215,23 @@ def index():
 # ------------------------------------------------------------------
 
 
+@app.route("/picks")
+@login_required
+def picks():
+    from swing_picks import build_picks
+    min_edge = int(request.args.get("min_edge", 60))
+    min_rs = int(request.args.get("min_rs", 60))
+    rows = build_picks(min_edge=min_edge, min_rs=min_rs)
+    return render_template(
+        "picks.html",
+        rows=rows,
+        min_edge=min_edge,
+        min_rs=min_rs,
+        regime=_regime_for_template(),
+        meta=get_alpha_meta(),
+    )
+
+
 @app.route("/opportunities")
 @login_required
 def opportunities():

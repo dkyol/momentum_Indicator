@@ -1,0 +1,241 @@
+{% extends "_layout.html" %}
+{% block title %}Swing Picks · Today's Long Candidates{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center mb-3">
+    <h2 class="mb-0"><i class="fas fa-crosshairs me-2 text-warning"></i>Today's Swing Picks</h2>
+    <span class="badge bg-warning text-dark ms-3">Long Candidates</span>
+    <small class="text-muted ms-auto">
+        {% if meta and meta.edge %}Last refresh: {{ meta.edge[:19].replace('T',' ') }}{% endif %}
+    </small>
+</div>
+
+<p class="text-muted mb-3">
+    Stocks that combine a high Edge Score, rising relative strength, and at least one bullish setup —
+    with computed entry trigger, stop level, and profit target derived from the primary setup and
+    historical backtest edge. Hold assumption: ~10 trading days.
+</p>
+
+{# ── Filter bar ─────────────────────────────────────────────────── #}
+<form method="get" action="{{ url_for('picks') }}" class="row g-2 align-items-end mb-4">
+    <div class="col-auto">
+        <label class="form-label small text-muted mb-1">Min Edge Score</label>
+        <input type="number" name="min_edge" value="{{ min_edge }}" min="0" max="100" step="5"
+               class="form-control form-control-sm" style="width: 90px;">
+    </div>
+    <div class="col-auto">
+        <label class="form-label small text-muted mb-1">Min RS Rating</label>
+        <input type="number" name="min_rs" value="{{ min_rs }}" min="1" max="99" step="5"
+               class="form-control form-control-sm" style="width: 90px;">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-outline-primary">Apply</button>
+        <a href="{{ url_for('picks') }}" class="btn btn-sm btn-outline-secondary ms-1">Reset</a>
+    </div>
+    <div class="col-auto ms-auto align-self-center">
+        <small class="text-muted">{{ rows|length }} candidate{{ 's' if rows|length != 1 else '' }}</small>
+    </div>
+</form>
+
+{% if rows %}
+<div class="card shadow-lg">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle small" id="picksTable">
+            <thead class="table-dark">
+                <tr>
+                    <th class="sortable" data-col="0">#</th>
+                    <th class="sortable" data-col="1">Symbol</th>
+                    <th class="sortable" data-col="2">Sector</th>
+                    <th class="sortable text-center" data-col="3"
+                        data-bs-toggle="tooltip" title="Composite Edge Score (0-100)">Edge</th>
+                    <th class="sortable text-center" data-col="4"
+                        data-bs-toggle="tooltip" title="Relative Strength Rating (1-99, IBD-style)">RS</th>
+                    <th>Setups</th>
+                    <th class="sortable" data-col="6">Entry Trigger</th>
+                    <th class="sortable text-end" data-col="7"
+                        data-bs-toggle="tooltip" title="Last close price">Close</th>
+                    <th class="sortable text-end" data-col="8"
+                        data-bs-toggle="tooltip" title="Technical stop level">Stop</th>
+                    <th class="sortable text-end" data-col="9"
+                        data-bs-toggle="tooltip" title="Risk as % of entry price">Risk%</th>
+                    <th class="sortable text-end" data-col="10"
+                        data-bs-toggle="tooltip" title="Profit target derived from historical avg return or 2:1 R:R">Target</th>
+                    <th class="sortable text-end" data-col="11"
+                        data-bs-toggle="tooltip" title="Reward vs risk ratio">R:R</th>
+                    <th class="sortable text-center" data-col="12"
+                        data-bs-toggle="tooltip" title="Historical hit rate for the primary setup (10-day hold backtest)">Hit%</th>
+                    <th class="sortable text-center" data-col="13"
+                        data-bs-toggle="tooltip" title="Historical average return for the primary setup">Avg Ret</th>
+                    <th class="text-center"
+                        data-bs-toggle="tooltip" title="Upcoming catalysts">Catalysts</th>
+                    <th class="sortable text-center" data-col="15"
+                        data-bs-toggle="tooltip" title="Intraday relative volume vs 20-day baseline (refreshed every 15 min)">RVOL</th>
+                    <th class="text-center"
+                        data-bs-toggle="tooltip" title="Passes FCF, debt, and revenue quality gate">Q</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr {% if not r.Quality_OK %}class="opacity-50"{% endif %}>
+                    <td class="text-muted">{{ loop.index }}</td>
+                    <td>
+                        <strong class="text-warning">{{ r.Symbol }}</strong>
+                        {% if r.SMA_50 %}
+                        <div class="text-muted" style="font-size:0.7rem">50d: ${{ r.SMA_50 }}</div>
+                        {% endif %}
+                        {% if r.SMA_200 %}
+                        <div class="text-muted" style="font-size:0.7rem">200d: ${{ r.SMA_200 }}</div>
+                        {% endif %}
+                    </td>
+                    <td><small class="text-muted">{{ r.Sector }}</small></td>
+                    <td class="text-center">
+                        <span class="fw-bold {% if r.Edge_Score >= 70 %}text-success{% elif r.Edge_Score >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ r.Edge_Score }}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        {% if r.RS_Rating is not none %}
+                        <span class="{% if r.RS_Rating >= 80 %}text-success fw-bold{% elif r.RS_Rating >= 60 %}text-warning{% else %}text-muted{% endif %}">
+                            {{ r.RS_Rating }}
+                        </span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if r.Primary_Setup %}
+                        <span class="badge bg-primary me-1">{{ r.Primary_Setup.replace('_',' ') }}</span>
+                        {% endif %}
+                        {% for s in r.Setups if s != r.Primary_Setup %}
+                        <span class="badge bg-secondary me-1">{{ s.replace('_',' ') }}</span>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <small>{{ r.Entry_Trigger }}</small>
+                    </td>
+                    <td class="text-end fw-bold">${{ r.Close or '—' }}</td>
+                    <td class="text-end">
+                        {% if r.Stop_Level is not none %}
+                        <span class="text-danger">${{ r.Stop_Level }}</span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if r.Stop_Pct is not none %}
+                        <span class="text-danger">{{ r.Stop_Pct }}%</span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if r.Target_Price is not none %}
+                        <span class="text-success">${{ r.Target_Price }}</span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if r.RR_Ratio is not none %}
+                        <span class="{% if r.RR_Ratio >= 2 %}text-success fw-bold{% elif r.RR_Ratio >= 1.5 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ r.RR_Ratio }}:1
+                        </span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if r.Hit_Rate is not none %}
+                        <span class="{% if r.Hit_Rate >= 55 %}text-success{% elif r.Hit_Rate >= 45 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ r.Hit_Rate }}%
+                        </span>
+                        {% else %}
+                        <span class="text-muted" data-bs-toggle="tooltip"
+                              title="Run 'Refresh alpha + backtest' to populate">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if r.Avg_Return is not none %}
+                        <span class="{% if r.Avg_Return >= 2 %}text-success{% elif r.Avg_Return >= 0 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ '+' if r.Avg_Return >= 0 else '' }}{{ r.Avg_Return }}%
+                        </span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if r.Catalyst_Flag %}
+                        <span class="badge bg-info text-dark">{{ r.Catalyst_Flag }}</span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if r.RVOL is not none %}
+                        <span class="{% if r.RVOL >= 2 %}text-success fw-bold{% elif r.RVOL >= 1.3 %}text-warning{% else %}text-muted{% endif %}">
+                            {{ r.RVOL }}×
+                        </span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if r.Quality_OK %}
+                        <i class="fas fa-check text-success" data-bs-toggle="tooltip" title="Passes quality gate"></i>
+                        {% else %}
+                        <i class="fas fa-times text-danger" data-bs-toggle="tooltip" title="Fails quality gate"></i>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<p class="text-muted small mt-3 mb-0">
+    <i class="fas fa-info-circle me-1"></i>
+    Stop levels are setup-specific technical levels (SMA200 for trend/golden-cross setups; 5% below 52w high for breakouts; 3% for thrust/divergence).
+    Targets use the historical backtest average return for the primary setup, capped at 3× stop distance.
+    Hit% and Avg Ret are from the nightly backtest — run <em>Refresh alpha + backtest</em> to update.
+</p>
+
+{% else %}
+<div class="card"><div class="card-body text-center text-muted py-5">
+    {% if min_edge > 60 or min_rs > 60 %}
+    <i class="fas fa-filter fa-2x mb-3 d-block text-warning"></i>
+    No candidates match the current filters (Edge ≥ {{ min_edge }}, RS ≥ {{ min_rs }}).
+    <br><a href="{{ url_for('picks') }}" class="btn btn-sm btn-outline-secondary mt-3">Reset filters</a>
+    {% else %}
+    <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block"></i>
+    Alpha data is being prepared. First-time bootstrap takes a few minutes — reload shortly.
+    {% endif %}
+</div></div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Column sort — reuses the same pattern as setups.html
+(function () {
+    const table = document.getElementById('picksTable');
+    if (!table) return;
+    let lastCol = -1, lastAsc = true;
+
+    table.querySelectorAll('th.sortable').forEach(th => {
+        th.style.cursor = 'pointer';
+        th.addEventListener('click', () => {
+            const col = parseInt(th.dataset.col, 10);
+            const asc = (col === lastCol) ? !lastAsc : true;
+            lastCol = col; lastAsc = asc;
+
+            const rows = Array.from(table.tBodies[0].rows);
+            rows.sort((a, b) => {
+                const ta = a.cells[col]?.textContent.trim() || '';
+                const tb = b.cells[col]?.textContent.trim() || '';
+                const na = parseFloat(ta.replace(/[^0-9.\-]/g, ''));
+                const nb = parseFloat(tb.replace(/[^0-9.\-]/g, ''));
+                const isNum = !isNaN(na) && !isNaN(nb);
+                if (isNum) {
+                    if (!ta) return 1;
+                    if (!tb) return -1;
+                    return asc ? na - nb : nb - na;
+                }
+                if (!ta) return 1;
+                if (!tb) return -1;
+                return asc ? ta.localeCompare(tb) : tb.localeCompare(ta);
+            });
+            rows.forEach(r => table.tBodies[0].appendChild(r));
+
+            table.querySelectorAll('th.sortable').forEach(h => h.classList.remove('sort-asc','sort-desc'));
+            th.classList.add(asc ? 'sort-asc' : 'sort-desc');
+        });
+    });
+})();
+</script>
+{% endblock %}

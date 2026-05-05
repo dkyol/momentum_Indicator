@@ -26,6 +26,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint=='picks' %}active fw-bold text-warning{% endif %}"
+                           href="{{ url_for('picks') }}">
+                            <i class="fas fa-crosshairs me-1"></i>Swing Picks
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if request.endpoint=='opportunities' %}active fw-bold{% endif %}"
                            href="{{ url_for('opportunities') }}">
                             <i class="fas fa-bullseye me-1"></i>Opportunities
