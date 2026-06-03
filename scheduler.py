@@ -18,6 +18,7 @@ from alpha_engine import refresh_alpha_data
 from portfolio_stats import take_equity_snapshot
 from rvol import save_rvol_snapshot, is_market_hours as _rvol_market_hours
 from exit_signals import save_exit_signals
+from email_alerts import send_nightly_alert
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -160,6 +161,14 @@ def nightly_exit_signal_refresh():
         logger.error(f"Nightly exit signal refresh failed: {e}")
 
 
+def nightly_alert_email():
+    """Send nightly email alert summarizing BUY and EXIT signals."""
+    try:
+        send_nightly_alert()
+    except Exception as e:
+        logger.error(f"Nightly alert email failed: {e}")
+
+
 def intraday_rvol_refresh():
     """Recompute time-adjusted RVOL during US market hours.
 
@@ -248,6 +257,14 @@ def run_scheduler():
     schedule.every().thursday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_exit_signal_refresh)
     schedule.every().friday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_exit_signal_refresh)
     schedule.every().saturday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_exit_signal_refresh)
+
+    # Nightly alert email — summarizes BUY and EXIT signals, runs after exit signals refresh
+    schedule.every().monday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_alert_email)
+    schedule.every().tuesday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_alert_email)
+    schedule.every().wednesday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_alert_email)
+    schedule.every().thursday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_alert_email)
+    schedule.every().friday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_alert_email)
+    schedule.every().saturday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_alert_email)
 
     # End-of-day equity snapshot for the portfolio dashboard (Mon-Fri).
     schedule.every().monday.at(LOCAL_EOD_SNAPSHOT).do(daily_equity_snapshot)
