@@ -19,6 +19,7 @@ WATCHLIST = [
     {"symbol": "SMCI", "name": "Super Micro Computer",       "score": 88, "tier": 1, "narrative": "AI server builder +123% YoY"},
     {"symbol": "VIAV", "name": "VIAVI Solutions",            "score": 82, "tier": 1, "narrative": "Optical testing monopoly, 60-70% share"},
     {"symbol": "VRT",  "name": "Vertiv",                     "score": 82, "tier": 1, "narrative": "Data center cooling + power architecture"},
+    {"symbol": "CRWV", "name": "CoreWeave",                  "score": 81, "tier": 1, "narrative": "AI cloud infrastructure (hyperscaler platform, $99.4B backlog)"},
     {"symbol": "ANET", "name": "Arista Networks",            "score": 78, "tier": 1, "narrative": "AI cluster 400G/800G networking"},
 
     # Tier 2 — Secondary setups (65-75)
