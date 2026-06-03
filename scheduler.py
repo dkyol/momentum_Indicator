@@ -19,6 +19,7 @@ from portfolio_stats import take_equity_snapshot
 from rvol import save_rvol_snapshot, is_market_hours as _rvol_market_hours
 from exit_signals import save_exit_signals
 from email_alerts import send_nightly_alert
+from watchlist_scanner import save_watchlist_scan
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -169,6 +170,14 @@ def nightly_alert_email():
         logger.error(f"Nightly alert email failed: {e}")
 
 
+def weekly_watchlist_refresh():
+    """Refresh watchlist MRVL-like signal scores weekly (Sunday after market close)."""
+    try:
+        save_watchlist_scan()
+    except Exception as e:
+        logger.error(f"Weekly watchlist scan failed: {e}")
+
+
 def intraday_rvol_refresh():
     """Recompute time-adjusted RVOL during US market hours.
 
@@ -265,6 +274,12 @@ def run_scheduler():
     schedule.every().thursday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_alert_email)
     schedule.every().friday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_alert_email)
     schedule.every().saturday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_alert_email)
+
+    # Weekly watchlist scan — Sunday 23:00 UTC (7 PM ET) after market close
+    # Scores all watchlist stocks for MRVL-like signal convergence
+    UTC_WEEKLY_SCAN_HHMM = (23, 0)
+    LOCAL_WEEKLY_SCAN = _utc_to_local_hhmm(*UTC_WEEKLY_SCAN_HHMM)
+    schedule.every().sunday.at(LOCAL_WEEKLY_SCAN).do(weekly_watchlist_refresh)
 
     # End-of-day equity snapshot for the portfolio dashboard (Mon-Fri).
     schedule.every().monday.at(LOCAL_EOD_SNAPSHOT).do(daily_equity_snapshot)

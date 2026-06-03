@@ -56,6 +56,7 @@ CACHE_BACKTEST = "cached_backtest.json"
 CACHE_RVOL = "cached_rvol.json"  # intraday time-adjusted relative volume
 CACHE_ALPHA_META = "cached_alpha_meta.json"  # last-update info
 CACHE_EXIT_SIGNALS = "cached_exit_signals.json"  # exit signal classifications
+CACHE_WATCHLIST_SCAN = "cached_watchlist_scan.json"  # weekly watchlist MRVL-like signal scores
 
 
 def _sanitize_for_json(obj: Any) -> Any:

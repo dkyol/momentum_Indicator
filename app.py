@@ -298,6 +298,22 @@ def trade_planner():
     )
 
 
+@app.route("/watchlist")
+@login_required
+def watchlist_dashboard():
+    """AI infrastructure watchlist with MRVL-like signal scores."""
+    from watchlist_scanner import get_cached_watchlist_scan
+
+    scan = get_cached_watchlist_scan()
+    return render_template(
+        "watchlist.html",
+        stocks=scan.get("stocks", []),
+        as_of=scan.get("as_of"),
+        regime=_regime_for_template(),
+        meta=get_alpha_meta(),
+    )
+
+
 @app.route("/opportunities")
 @login_required
 def opportunities():
