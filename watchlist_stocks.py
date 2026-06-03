@@ -1,63 +1,145 @@
+#!/usr/bin/env python3
 """
-AI Infrastructure Watchlist — 23 stocks + MRVL benchmark
+Cross-Industry Watchlist for MRVL-Like Accumulation Patterns
 
-Scored against the MRVL framework:
-- Business Narrative (30 pts): AI tailwinds + partnerships
-- Catalyst Visibility (20 pts): Near-term catalysts
-- Valuation Setup (20 pts): P/E vs. growth
-- Technical Setup (15 pts): Volume/RSI/ADX signals
-- Growth Potential (15 pts): Multi-year TAM
+Strategy: Scan broadly across industries and let the 5 MRVL indicators (RVOL, OBV, MFI, ADX, A/D)
+identify which stocks are showing spring loading patterns. Narrative analysis comes AFTER we see
+what's accumulating.
 
-Monitored weekly for MRVL-like volume indicator convergence (RVOL, OBV, MFI, ADX, A/D).
+Includes:
+- AI Infrastructure (custom chips, servers, networking, cooling)
+- Space/Satellite Tech (LUNR, RKLB, SPIR, etc.)
+- Semiconductors (broad coverage)
+- Cloud/SaaS
+- Quantum Computing
+- Robotics/Automation
+- Energy (renewables, nuclear, grid)
+- Biotech/Synthetic Biology
+- And others showing high growth potential
+
+Scoring removed intentionally. Let MRVL indicators determine which stocks are worth buying.
 """
 
 WATCHLIST = [
-    # Tier 1 — High-conviction, highest MRVL-like scores (75+)
-    {"symbol": "COHR", "name": "Coherent Corp",              "score": 96, "tier": 1, "narrative": "NVIDIA $2B optical partner, CPO"},
-    {"symbol": "LITE", "name": "Lumentum Holdings",          "score": 94, "tier": 1, "narrative": "Photonics supply +85% growth YoY"},
-    {"symbol": "AVGO", "name": "Broadcom",                   "score": 92, "tier": 1, "narrative": "Custom AI chips for hyperscalers"},
-    {"symbol": "SMCI", "name": "Super Micro Computer",       "score": 88, "tier": 1, "narrative": "AI server builder +123% YoY"},
-    {"symbol": "VIAV", "name": "VIAVI Solutions",            "score": 82, "tier": 1, "narrative": "Optical testing monopoly, 60-70% share"},
-    {"symbol": "VRT",  "name": "Vertiv",                     "score": 82, "tier": 1, "narrative": "Data center cooling + power architecture"},
-    {"symbol": "CRWV", "name": "CoreWeave",                  "score": 81, "tier": 1, "narrative": "AI cloud infrastructure (hyperscaler platform, $99.4B backlog)"},
-    {"symbol": "ANET", "name": "Arista Networks",            "score": 78, "tier": 1, "narrative": "AI cluster 400G/800G networking"},
+    # ============================================================================
+    # AI INFRASTRUCTURE (Original focus)
+    # ============================================================================
+    {"symbol": "COHR", "name": "Coherent Corp",              "sector": "Photonics", "theme": "AI Infrastructure"},
+    {"symbol": "LITE", "name": "Lumentum Holdings",          "sector": "Photonics", "theme": "AI Infrastructure"},
+    {"symbol": "AVGO", "name": "Broadcom",                   "sector": "Semiconductors", "theme": "AI Infrastructure"},
+    {"symbol": "SMCI", "name": "Super Micro Computer",       "sector": "Hardware", "theme": "AI Infrastructure"},
+    {"symbol": "VIAV", "name": "VIAVI Solutions",            "sector": "Optical Test", "theme": "AI Infrastructure"},
+    {"symbol": "VRT",  "name": "Vertiv",                     "sector": "Data Center", "theme": "AI Infrastructure"},
+    {"symbol": "CRWV", "name": "CoreWeave",                  "sector": "Cloud", "theme": "AI Infrastructure"},
+    {"symbol": "ANET", "name": "Arista Networks",            "sector": "Networking", "theme": "AI Infrastructure"},
+    {"symbol": "DELL", "name": "Dell Technologies",          "sector": "Hardware", "theme": "AI Infrastructure"},
+    {"symbol": "PSTG", "name": "Pure Storage",               "sector": "Storage", "theme": "AI Infrastructure"},
 
-    # Tier 2 — Secondary setups (65-75)
-    {"symbol": "DELL", "name": "Dell Technologies",          "score": 72, "tier": 2, "narrative": "AI server & infrastructure market expansion"},
-    {"symbol": "TSLA", "name": "Tesla",                      "score": 72, "tier": 2, "narrative": "FSD AI, Optimus robot, Dojo AI supercomputer"},
-    {"symbol": "PSTG", "name": "Pure Storage",               "score": 71, "tier": 2, "narrative": "AI data storage infrastructure"},
-    {"symbol": "AMD",  "name": "Advanced Micro Devices",     "score": 70, "tier": 2, "narrative": "GPU/CPU competition with NVDA"},
-    {"symbol": "NXPI", "name": "NXP Semiconductors",         "score": 69, "tier": 2, "narrative": "Edge AI chips for IoT/automotive"},
-    {"symbol": "QCOM", "name": "Qualcomm",                   "score": 68, "tier": 2, "narrative": "On-device AI inference snapdragon"},
+    # ============================================================================
+    # SPACE & SATELLITE TECH (Broader tech expansion)
+    # ============================================================================
+    {"symbol": "LUNR", "name": "Lunar",                      "sector": "Space", "theme": "Space Tech"},
+    {"symbol": "RKLB", "name": "Rocket Lab",                 "sector": "Space", "theme": "Space Tech"},
+    {"symbol": "SPIR", "name": "Spire Global",               "sector": "Satellite", "theme": "Space Tech"},
+    {"symbol": "AXIOM", "name": "Axiom Space",               "sector": "Space", "theme": "Space Tech"},
+    {"symbol": "PLCE", "name": "Planet Labs",                "sector": "Satellite", "theme": "Space Tech"},
 
-    # Tier 3 — Speculative setups (55-65)
-    {"symbol": "KLAC", "name": "KLA Corporation",            "score": 63, "tier": 3, "narrative": "Semiconductor process control equipment"},
-    {"symbol": "LRCX", "name": "Lam Research",               "score": 62, "tier": 3, "narrative": "Semiconductor deposition equipment"},
-    {"symbol": "MOD",  "name": "Modine Manufacturing",       "score": 61, "tier": 3, "narrative": "Data center thermal management"},
-    {"symbol": "ETN",  "name": "Eaton",                      "score": 58, "tier": 3, "narrative": "Electrical infrastructure, UPS, power"},
-    {"symbol": "GTLS", "name": "Chart Industries",           "score": 56, "tier": 3, "narrative": "Cooling gas infrastructure"},
-    {"symbol": "MSFT", "name": "Microsoft",                  "score": 55, "tier": 3, "narrative": "Azure AI platform & copilot integration"},
+    # ============================================================================
+    # SEMICONDUCTORS (Broad coverage)
+    # ============================================================================
+    {"symbol": "NVDA", "name": "NVIDIA",                     "sector": "Semiconductors", "theme": "AI Chips"},
+    {"symbol": "AMD",  "name": "Advanced Micro Devices",     "sector": "Semiconductors", "theme": "AI Chips"},
+    {"symbol": "QCOM", "name": "Qualcomm",                   "sector": "Semiconductors", "theme": "Mobile AI"},
+    {"symbol": "NXPI", "name": "NXP Semiconductors",         "sector": "Semiconductors", "theme": "Edge AI"},
+    {"symbol": "MU",   "name": "Micron Technology",          "sector": "Semiconductors", "theme": "Memory"},
+    {"symbol": "SLAB", "name": "Silicon Labs",               "sector": "Semiconductors", "theme": "IoT/Edge"},
+    {"symbol": "ASML", "name": "ASML",                       "sector": "Semiconductors", "theme": "Chip Equipment"},
+    {"symbol": "LRCX", "name": "Lam Research",               "sector": "Semiconductors", "theme": "Chip Equipment"},
+    {"symbol": "KLAC", "name": "KLA Corporation",            "sector": "Semiconductors", "theme": "Chip Equipment"},
 
-    # Tier 4 — Long shots (under 55)
-    {"symbol": "MU",   "name": "Micron Technology",          "score": 52, "tier": 4, "narrative": "AI memory (HBM) ramp-up"},
-    {"symbol": "SLAB", "name": "Silicon Labs",               "score": 51, "tier": 4, "narrative": "IoT/edge AI microcontroller chips"},
-    {"symbol": "TTM",  "name": "TTM Technologies",           "score": 48, "tier": 4, "narrative": "Printed circuit boards for AI hardware"},
+    # ============================================================================
+    # CLOUD & SAAS (Artificial intelligence expansion)
+    # ============================================================================
+    {"symbol": "MSFT", "name": "Microsoft",                  "sector": "Cloud", "theme": "Azure AI"},
+    {"symbol": "GOOGL", "name": "Alphabet",                  "sector": "Cloud", "theme": "Google Cloud AI"},
+    {"symbol": "AMZN", "name": "Amazon",                     "sector": "Cloud", "theme": "AWS AI"},
+    {"symbol": "SNOW", "name": "Snowflake",                  "sector": "Cloud", "theme": "Data/ML"},
+    {"symbol": "DDOG", "name": "Datadog",                    "sector": "SaaS", "theme": "Monitoring/AI"},
+    {"symbol": "OKTA", "name": "Okta",                       "sector": "SaaS", "theme": "Identity"},
+    {"symbol": "NET",  "name": "Cloudflare",                 "sector": "Cloud", "theme": "Edge Computing"},
 
-    # Tier 0 — Benchmark (MRVL case study)
-    {"symbol": "MRVL", "name": "Marvell Technology",         "score": 95, "tier": 0, "narrative": "BENCHMARK: custom AI chips, 300% move March-June"},
+    # ============================================================================
+    # QUANTUM COMPUTING (Emerging AI-adjacent)
+    # ============================================================================
+    {"symbol": "IONQ", "name": "IonQ",                       "sector": "Quantum", "theme": "Quantum Computing"},
+    {"symbol": "RIGETTI", "name": "Rigetti Computing",       "sector": "Quantum", "theme": "Quantum Computing"},
+
+    # ============================================================================
+    # ROBOTICS & AUTOMATION (AI-powered)
+    # ============================================================================
+    {"symbol": "TSLA", "name": "Tesla",                      "sector": "Automotive", "theme": "AI Robots/FSD"},
+    {"symbol": "ABB",  "name": "ABB",                        "sector": "Industrial", "theme": "Robotics"},
+    {"symbol": "IRBT", "name": "iRobot",                     "sector": "Robotics", "theme": "Consumer Robots"},
+    {"symbol": "MARA", "name": "Marathon",                   "sector": "Robotics", "theme": "Humanoid Robots"},
+
+    # ============================================================================
+    # ENERGY (Grid modernization, AI-powered optimization)
+    # ============================================================================
+    {"symbol": "PLUG", "name": "Plug Power",                 "sector": "Energy", "theme": "Hydrogen Fuel"},
+    {"symbol": "LCID", "name": "Lucid Motors",               "sector": "Automotive", "theme": "EV/AI"},
+    {"symbol": "NIO",  "name": "NIO",                        "sector": "Automotive", "theme": "EV/AI"},
+    {"symbol": "RUN",  "name": "Sunrun",                     "sector": "Renewable", "theme": "Solar"},
+    {"symbol": "ENPH", "name": "Enphase Energy",             "sector": "Renewable", "theme": "Solar"},
+    {"symbol": "CEG",  "name": "Constellation Energy",       "sector": "Nuclear", "theme": "Nuclear Power"},
+    {"symbol": "SMR",  "name": "NuScale Power",              "sector": "Nuclear", "theme": "Small Reactors"},
+
+    # ============================================================================
+    # BIOTECH & SYNTHETIC BIOLOGY (AI-accelerated discovery)
+    # ============================================================================
+    {"symbol": "EDIT", "name": "EDITAS Medicine",            "sector": "Biotech", "theme": "CRISPR/Gene Edit"},
+    {"symbol": "CRSP", "name": "CRISPR Therapeutics",        "sector": "Biotech", "theme": "CRISPR"},
+    {"symbol": "GKOS", "name": "Ginkgo Bioworks",            "sector": "Biotech", "theme": "Synthetic Bio"},
+    {"symbol": "BNTX", "name": "BioNTech",                   "sector": "Biotech", "theme": "mRNA/AI"},
+
+    # ============================================================================
+    # NETWORKING & TELECOM (AI infrastructure, 5G/6G buildout)
+    # ============================================================================
+    {"symbol": "MSTR", "name": "MicroStrategy",              "sector": "Enterprise", "theme": "Data/BI"},
+    {"symbol": "SPLK", "name": "Splunk",                     "sector": "Enterprise", "theme": "Log Analytics"},
+    {"symbol": "CRM",  "name": "Salesforce",                 "sector": "SaaS", "theme": "CRM/AI"},
+
+    # ============================================================================
+    # BENCHMARK (For comparison)
+    # ============================================================================
+    {"symbol": "MRVL", "name": "Marvell Technology",         "sector": "Semiconductors", "theme": "MRVL Benchmark (300% March-June 2026)"},
 ]
 
 
-def get_watchlist() -> list[dict]:
+def get_watchlist():
     """Return full watchlist with metadata."""
     return WATCHLIST
 
 
-def get_watchlist_symbols() -> list[str]:
+def get_watchlist_symbols():
     """Return just the tickers for scanning."""
     return [item["symbol"] for item in WATCHLIST]
 
 
-def get_watchlist_by_tier(tier: int) -> list[dict]:
-    """Get all stocks in a specific tier."""
-    return [item for item in WATCHLIST if item["tier"] == tier]
+def get_watchlist_by_sector(sector: str):
+    """Get all stocks in a specific sector."""
+    return [item for item in WATCHLIST if item.get("sector") == sector]
+
+
+def get_watchlist_by_theme(theme: str):
+    """Get all stocks in a specific theme."""
+    return [item for item in WATCHLIST if item.get("theme") == theme]
+
+
+def get_sectors():
+    """Get list of all sectors in watchlist."""
+    return sorted(set(item.get("sector") for item in WATCHLIST if item.get("sector")))
+
+
+def get_themes():
+    """Get list of all themes in watchlist."""
+    return sorted(set(item.get("theme") for item in WATCHLIST if item.get("theme")))
