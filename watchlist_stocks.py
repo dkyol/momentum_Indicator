@@ -143,3 +143,26 @@ def get_sectors():
 def get_themes():
     """Get list of all themes in watchlist."""
     return sorted(set(item.get("theme") for item in WATCHLIST if item.get("theme")))
+
+
+def add_stock(symbol: str, name: str, sector: str, theme: str):
+    """Add a new stock to the watchlist."""
+    new_stock = {"symbol": symbol, "name": name, "sector": sector, "theme": theme}
+    WATCHLIST.append(new_stock)
+    return new_stock
+
+
+def remove_stock(symbol: str) -> bool:
+    """Remove a stock from the watchlist. Returns True if removed, False if not found."""
+    global WATCHLIST
+    original_count = len(WATCHLIST)
+    WATCHLIST = [s for s in WATCHLIST if s["symbol"] != symbol]
+    return len(WATCHLIST) < original_count
+
+
+def replace_stock(remove_symbol: str, add_symbol: str, add_name: str, add_sector: str, add_theme: str) -> bool:
+    """Replace one stock with another."""
+    if remove_stock(remove_symbol):
+        add_stock(add_symbol, add_name, add_sector, add_theme)
+        return True
+    return False
