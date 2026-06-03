@@ -13,6 +13,7 @@ No network calls, no DB writes — pure cache reads.
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 from backtester import get_cached_backtest
@@ -52,16 +53,78 @@ def _stop(setup: str, close: float, sma_200: float | None, high_52w: float | Non
     return round(close * 0.97, 2)             # 3% below close
 
 
-def build_picks(min_edge: int = 60, min_rs: int = 60) -> list[dict[str, Any]]:
-    """Return ranked list of actionable long swing-trade candidates.
+def compute_position_size(
+    entry_price: float,
+    stop_price: float,
+    target_price: float | None,
+    account_size: float,
+    risk_pct: float = 1.0,
+) -> dict[str, Any]:
+    """Calculate position size based on risk management rules.
+
+    Args:
+        entry_price: Entry price per share.
+        stop_price: Stop loss price per share.
+        target_price: Target price per share (optional).
+        account_size: Total account size in dollars.
+        risk_pct: Risk percentage per trade (default 1%).
+
+    Returns:
+        Dict with shares, position_value, max_loss_dollars, potential_gain, etc.
+        All computation fields are None if entry_price <= stop_price.
+    """
+    if entry_price <= 0 or stop_price <= 0 or entry_price <= stop_price:
+        return {
+            "risk_per_share": None,
+            "max_loss_dollars": None,
+            "shares": None,
+            "position_value": None,
+            "potential_gain": None,
+            "position_pct_of_account": None,
+            "error": "Invalid entry/stop: entry must be > stop",
+        }
+
+    risk_per_share = entry_price - stop_price
+    max_loss_dollars = account_size * risk_pct / 100
+    shares = int(max_loss_dollars / risk_per_share)
+
+    # Cap shares so position never exceeds 100% of account
+    max_shares = int(account_size / entry_price)
+    shares = min(shares, max_shares)
+
+    position_value = shares * entry_price
+    position_pct = position_value / account_size * 100 if account_size > 0 else 0
+    potential_gain = shares * (target_price - entry_price) if target_price else None
+
+    return {
+        "risk_per_share": round(risk_per_share, 2),
+        "max_loss_dollars": round(max_loss_dollars, 2),
+        "shares": shares,
+        "position_value": round(position_value, 2),
+        "potential_gain": round(potential_gain, 2) if potential_gain else None,
+        "position_pct_of_account": round(position_pct, 1),
+    }
+
+
+def build_picks(
+    min_edge: int = 60,
+    min_rs: int = 60,
+    account_size: float | None = None,
+    risk_pct: float = 1.0,
+) -> list[dict[str, Any]]:
+    """Return ranked list of actionable long swing-trade candidates with position sizing.
 
     Args:
         min_edge: Minimum composite Edge Score (0-100).
         min_rs:   Minimum RS Rating (1-99).
+        account_size: Account size in dollars for position sizing (default from ACCOUNT_SIZE env var, falls back to 10000).
+        risk_pct: Risk percentage per trade (default 1%).
 
     Returns:
-        List of dicts sorted quality-first then edge descending.
+        List of dicts sorted quality-first then edge descending, with position sizing fields.
     """
+    if account_size is None:
+        account_size = float(os.environ.get("ACCOUNT_SIZE", 10000))
     edge_payload = get_cached_edge_scores()
     all_edge_rows = edge_payload.get("rows", [])
 
@@ -143,6 +206,16 @@ def build_picks(min_edge: int = 60, min_rs: int = 60) -> list[dict[str, Any]]:
 
         rv = rvol_map.get(sym)
 
+        # Position sizing
+        rsi_14 = sd.get("RSI_14")
+        sizing = compute_position_size(
+            entry_price=close or 0,
+            stop_price=stop_price or 0,
+            target_price=target_price,
+            account_size=account_size,
+            risk_pct=risk_pct,
+        )
+
         picks.append({
             "Symbol":        sym,
             "Sector":        edge_row.get("Sector") or "—",
@@ -154,6 +227,7 @@ def build_picks(min_edge: int = 60, min_rs: int = 60) -> list[dict[str, Any]]:
             "Close":         round(float(close), 2) if close else None,
             "SMA_50":        round(float(sma_50), 2) if sma_50 else None,
             "SMA_200":       round(float(sma_200), 2) if sma_200 else None,
+            "RSI_14":        round(float(rsi_14), 1) if rsi_14 else None,
             "Stop_Level":    stop_price,
             "Stop_Pct":      stop_pct,
             "Target_Price":  target_price,
@@ -165,6 +239,11 @@ def build_picks(min_edge: int = 60, min_rs: int = 60) -> list[dict[str, Any]]:
             "Catalyst_Flag": " · ".join(parts),
             "Quality_OK":    edge_row.get("Quality_OK", False),
             "RVOL":          round(float(rv["rvol"]), 1) if rv and rv.get("rvol") else None,
+            "Shares":        sizing.get("shares"),
+            "Position_Value": sizing.get("position_value"),
+            "Max_Loss_Dollars": sizing.get("max_loss_dollars"),
+            "Potential_Gain": sizing.get("potential_gain"),
+            "Position_Pct": sizing.get("position_pct_of_account"),
         })
 
     picks.sort(key=lambda r: (0 if r["Quality_OK"] else 1, -(r["Edge_Score"] or 0)))

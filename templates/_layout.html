@@ -32,6 +32,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint=='trade_planner' %}active fw-bold text-success{% endif %}"
+                           href="{{ url_for('trade_planner') }}">
+                            <i class="fas fa-play-circle me-1 text-success"></i>Trade Planner
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if request.endpoint=='opportunities' %}active fw-bold{% endif %}"
                            href="{{ url_for('opportunities') }}">
                             <i class="fas fa-bullseye me-1"></i>Opportunities

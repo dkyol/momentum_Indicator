@@ -221,14 +221,80 @@ def picks():
     from swing_picks import build_picks
     min_edge = int(request.args.get("min_edge", 60))
     min_rs = int(request.args.get("min_rs", 60))
-    rows = build_picks(min_edge=min_edge, min_rs=min_rs)
+    account_size = float(request.args.get("account_size", os.environ.get("ACCOUNT_SIZE", 10000)))
+    risk_pct = float(request.args.get("risk_pct", 1.0))
+    rows = build_picks(min_edge=min_edge, min_rs=min_rs, account_size=account_size, risk_pct=risk_pct)
     return render_template(
         "picks.html",
         rows=rows,
         min_edge=min_edge,
         min_rs=min_rs,
+        account_size=account_size,
+        risk_pct=risk_pct,
         regime=_regime_for_template(),
         meta=get_alpha_meta(),
+    )
+
+
+@app.route("/trade-planner")
+@login_required
+def trade_planner():
+    from swing_picks import build_picks
+    from exit_signals import get_cached_exit_signals
+
+    account_size = float(request.args.get("account_size", os.environ.get("ACCOUNT_SIZE", 10000)))
+    risk_pct = float(request.args.get("risk_pct", 1.0))
+
+    # All picks with sizing, no edge/rs filter
+    all_picks = build_picks(min_edge=0, min_rs=0, account_size=account_size, risk_pct=risk_pct)
+
+    exit_map = get_cached_exit_signals().get("signals", {})
+
+    # BUY ZONE: active setup + Edge_Score > 50 + RSI < 55
+    buy_zone = [
+        r for r in all_picks
+        if r.get("Setups")
+        and (r.get("Edge_Score") or 0) > 50
+        and (r.get("RSI_14") is None or r.get("RSI_14") < 55)
+    ]
+
+    # EXIT ZONE: any stock with a non-HOLD exit signal
+    exit_zone_symbols = {sym for sym, sig in exit_map.items() if sig.get("exit_signal") != "HOLD"}
+
+    # Build exit zone rows: join exit signals onto pick data
+    pick_map = {r["Symbol"]: r for r in all_picks}
+    exit_zone = []
+    for sym in sorted(exit_zone_symbols):
+        sig = exit_map[sym]
+        pick_row = pick_map.get(sym, {})
+        if pick_row:
+            row = dict(pick_row)
+        else:
+            row = {"Symbol": sym}
+        row["Exit_Signal"] = sig.get("exit_signal")
+        row["Exit_Reason"] = sig.get("exit_reason")
+        row["Distance_To_Target_Pct"] = sig.get("distance_to_target_pct")
+        row["Distance_To_Stop_Pct"] = sig.get("distance_to_stop_pct")
+        exit_zone.append(row)
+    exit_zone.sort(key=lambda r: (r.get("Edge_Score") or 0), reverse=True)
+
+    # HOLD ZONE: has a pick but no active setup and no exit signal
+    hold_zone = [
+        r for r in all_picks
+        if not r.get("Setups")
+        and r["Symbol"] not in exit_zone_symbols
+    ]
+
+    return render_template(
+        "trade_planner.html",
+        buy_zone=buy_zone,
+        exit_zone=exit_zone,
+        hold_zone=hold_zone,
+        account_size=account_size,
+        risk_pct=risk_pct,
+        regime=_regime_for_template(),
+        meta=get_alpha_meta(),
+        exit_signals_as_of=get_cached_exit_signals().get("as_of"),
     )
 
 

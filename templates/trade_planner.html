@@ -1,0 +1,305 @@
+{% extends "_layout.html" %}
+
+{% block title %}Trade Planner{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="mb-2">Trade Planner</h1>
+            <p class="text-muted">
+                {% if exit_signals_as_of %}
+                    Exit signals last updated: <small>{{ exit_signals_as_of }}</small>
+                {% else %}
+                    <small class="text-warning">Exit signals not yet available — will appear after first nightly refresh</small>
+                {% endif %}
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if regime %}
+                <span class="badge bg-{{ regime.color }}">{{ regime.name }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Position Sizing Panel -->
+    <div class="card mb-4 border-info">
+        <div class="card-header bg-info text-white">
+            <i class="fas fa-calculator me-2"></i>Position Sizing
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="accountSize" class="form-label">Account Size ($)</label>
+                    <input type="number" class="form-control" id="accountSize"
+                           value="{{ account_size | int }}" min="1000" step="1000">
+                </div>
+                <div class="col-md-6">
+                    <label for="riskPct" class="form-label">Risk per Trade (%)</label>
+                    <input type="number" class="form-control" id="riskPct"
+                           value="{{ risk_pct }}" min="0.1" max="10" step="0.1">
+                </div>
+            </div>
+            <small class="text-muted d-block mt-3">
+                Based on $<span id="displayAccount">{{ account_size | int }}</span> account,
+                risking <span id="displayRisk">{{ risk_pct }}</span>% per trade
+            </small>
+        </div>
+    </div>
+
+    <!-- BUY ZONE -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <i class="fas fa-arrow-up me-2"></i>Buy Zone ({{ buy_zone | length }} stocks)
+        </div>
+        <div class="card-body p-0">
+            {% if buy_zone %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Setup</th>
+                                <th>Close</th>
+                                <th>RSI</th>
+                                <th>Entry</th>
+                                <th>Stop</th>
+                                <th>Target</th>
+                                <th>R:R</th>
+                                <th>Shares</th>
+                                <th>$ at Risk</th>
+                                <th>Potential Gain</th>
+                                <th>Hit%</th>
+                                <th>Edge</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in buy_zone %}
+                                {% set rsi = row.RSI_14 %}
+                                {% if rsi and rsi < 40 %}
+                                    {% set row_class = "table-success" %}
+                                {% elif rsi and rsi < 55 %}
+                                    {% set row_class = "table-warning" %}
+                                {% else %}
+                                    {% set row_class = "" %}
+                                {% endif %}
+                                <tr class="{{ row_class }}"
+                                    data-entry="{{ row.Close or 0 }}"
+                                    data-stop="{{ row.Stop_Level or 0 }}"
+                                    data-target="{{ row.Target_Price or 0 }}">
+                                    <td><strong>{{ row.Symbol }}</strong></td>
+                                    <td><small>{{ row.Primary_Setup or "—" }}</small></td>
+                                    <td>${{ "%.2f" % (row.Close or 0) }}</td>
+                                    <td>
+                                        {% if rsi %}
+                                            <span class="badge {% if rsi < 40 %}bg-danger{% elif rsi < 55 %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                                                {{ "%.0f" % rsi }}
+                                            </span>
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                    <td>${{ "%.2f" % (row.Close or 0) }}</td>
+                                    <td>${{ "%.2f" % (row.Stop_Level or 0) }}</td>
+                                    <td>${{ "%.2f" % (row.Target_Price or 0) }}</td>
+                                    <td>{{ row.RR_Ratio or "—" }}</td>
+                                    <td class="js-shares">{{ row.Shares or "—" }}</td>
+                                    <td class="js-at-risk">${{ "%.0f" % (row.Max_Loss_Dollars or 0) }}</td>
+                                    <td class="js-gain">${{ "%.0f" % (row.Potential_Gain or 0) }}</td>
+                                    <td>{{ "%.0f%%" % (row.Hit_Rate * 100) if row.Hit_Rate else "—" }}</td>
+                                    <td>{{ row.Edge_Score or "—" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info m-3">
+                    <i class="fas fa-info-circle me-2"></i>No stocks currently in the buy zone
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- EXIT ZONE -->
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <i class="fas fa-arrow-down me-2"></i>Exit Zone ({{ exit_zone | length }} stocks)
+        </div>
+        <div class="card-body p-0">
+            {% if exit_zone %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Exit Signal</th>
+                                <th>Reason</th>
+                                <th>Close</th>
+                                <th>Target</th>
+                                <th>Dist to Target%</th>
+                                <th>Stop</th>
+                                <th>Dist to Stop%</th>
+                                <th>Recommendation</th>
+                                <th>Edge</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in exit_zone %}
+                                {% set signal = row.Exit_Signal or "HOLD" %}
+                                {% if signal == "TAKE_PROFIT" or signal == "OVERBOUGHT" %}
+                                    {% set badge_class = "bg-danger" %}
+                                    {% set recommendation = "SELL" %}
+                                {% elif signal == "STOP_THREATENED" %}
+                                    {% set badge_class = "bg-warning text-dark" %}
+                                    {% set recommendation = "TRAIL" %}
+                                {% elif signal == "TREND_BROKEN" %}
+                                    {% set badge_class = "bg-info" %}
+                                    {% set recommendation = "WATCH" %}
+                                {% else %}
+                                    {% set badge_class = "bg-secondary" %}
+                                    {% set recommendation = "HOLD" %}
+                                {% endif %}
+                                <tr>
+                                    <td><strong>{{ row.Symbol }}</strong></td>
+                                    <td><span class="badge {{ badge_class }}">{{ signal }}</span></td>
+                                    <td><small>{{ row.Exit_Reason or "—" }}</small></td>
+                                    <td>${{ "%.2f" % (row.Close or 0) }}</td>
+                                    <td>${{ "%.2f" % (row.Target_Price or 0) }}</td>
+                                    <td>
+                                        {% if row.Distance_To_Target_Pct is not none %}
+                                            <span class="{% if row.Distance_To_Target_Pct > 0 %}text-success{% else %}text-danger{% endif %}">
+                                                {{ "%+.1f" % row.Distance_To_Target_Pct }}%
+                                            </span>
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                    <td>${{ "%.2f" % (row.Stop_Level or 0) }}</td>
+                                    <td>
+                                        {% if row.Distance_To_Stop_Pct is not none %}
+                                            <span class="{% if row.Distance_To_Stop_Pct > 2 %}text-success{% else %}text-danger{% endif %}">
+                                                {{ "%+.1f" % row.Distance_To_Stop_Pct }}%
+                                            </span>
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                    <td><strong>{{ recommendation }}</strong></td>
+                                    <td>{{ row.Edge_Score or "—" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info m-3">
+                    <i class="fas fa-check-circle me-2"></i>No exit signals at this time
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- HOLD ZONE (collapsible) -->
+    <div class="card">
+        <div class="card-header bg-secondary text-white" role="button" data-bs-toggle="collapse"
+             data-bs-target="#holdZone" aria-expanded="false">
+            <i class="fas fa-pause-circle me-2"></i>Hold Zone ({{ hold_zone | length }} stocks)
+            <small class="float-end text-muted">click to expand</small>
+        </div>
+        <div class="collapse" id="holdZone">
+            <div class="card-body p-0">
+                {% if hold_zone %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Close</th>
+                                    <th>Target</th>
+                                    <th>Dist to Target%</th>
+                                    <th>Edge</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in hold_zone %}
+                                    <tr>
+                                        <td><strong>{{ row.Symbol }}</strong></td>
+                                        <td>${{ "%.2f" % (row.Close or 0) }}</td>
+                                        <td>${{ "%.2f" % (row.Target_Price or 0) }}</td>
+                                        <td>
+                                            {% set dist = row.Target_Price - (row.Close or 0) %}
+                                            {% if row.Close and row.Target_Price %}
+                                                {{ "%+.1f" % (dist / row.Close * 100) }}%
+                                            {% else %}
+                                                —
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ row.Edge_Score or "—" }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info m-3 mb-0">
+                        <i class="fas fa-info-circle me-2"></i>No stocks in hold zone
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const accountInput = document.getElementById('accountSize');
+    const riskInput = document.getElementById('riskPct');
+    const displayAccount = document.getElementById('displayAccount');
+    const displayRisk = document.getElementById('displayRisk');
+
+    function updateDisplay() {
+        const account = parseFloat(accountInput.value) || 10000;
+        const risk = parseFloat(riskInput.value) || 1.0;
+
+        displayAccount.textContent = account.toLocaleString('en-US', {maximumFractionDigits: 0});
+        displayRisk.textContent = risk.toFixed(1);
+
+        recalcSizing(account, risk);
+    }
+
+    function recalcSizing(account, risk) {
+        const maxLoss = account * risk / 100;
+
+        document.querySelectorAll('tr[data-entry]').forEach(row => {
+            const entry = parseFloat(row.dataset.entry);
+            const stop = parseFloat(row.dataset.stop);
+            const target = parseFloat(row.dataset.target);
+
+            if (!entry || !stop || entry <= stop) return;
+
+            const riskPerShare = entry - stop;
+            const shares = Math.floor(maxLoss / riskPerShare);
+            const positionValue = shares * entry;
+            const potentialGain = target ? shares * (target - entry) : null;
+
+            row.querySelector('.js-shares').textContent = shares;
+            row.querySelector('.js-at-risk').textContent = '$' + Math.round(maxLoss).toLocaleString();
+            if (row.querySelector('.js-position-value')) {
+                row.querySelector('.js-position-value').textContent = '$' + Math.round(positionValue).toLocaleString();
+            }
+            if (potentialGain !== null && row.querySelector('.js-gain')) {
+                row.querySelector('.js-gain').textContent = '$' + Math.round(potentialGain).toLocaleString();
+            }
+        });
+    }
+
+    accountInput.addEventListener('input', updateDisplay);
+    riskInput.addEventListener('input', updateDisplay);
+
+    // Initial calc on page load
+    updateDisplay();
+});
+</script>
+{% endblock %}

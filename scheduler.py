@@ -17,6 +17,7 @@ from sma_analyzer import get_sma_summary
 from alpha_engine import refresh_alpha_data
 from portfolio_stats import take_equity_snapshot
 from rvol import save_rvol_snapshot, is_market_hours as _rvol_market_hours
+from exit_signals import save_exit_signals
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -151,6 +152,14 @@ def refresh_alpha_with_backtest():
         logger.error(f"Nightly alpha refresh failed: {e}")
 
 
+def nightly_exit_signal_refresh():
+    """Refresh exit signals based on fresh setup data from alpha refresh."""
+    try:
+        save_exit_signals()
+    except Exception as e:
+        logger.error(f"Nightly exit signal refresh failed: {e}")
+
+
 def intraday_rvol_refresh():
     """Recompute time-adjusted RVOL during US market hours.
 
@@ -231,6 +240,14 @@ def run_scheduler():
     schedule.every().thursday.at(LOCAL_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
     schedule.every().friday.at(LOCAL_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
     schedule.every().saturday.at(LOCAL_NIGHTLY_ALPHA).do(refresh_alpha_with_backtest)
+
+    # Exit signal refresh — runs after alpha refresh finishes
+    schedule.every().monday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_exit_signal_refresh)
+    schedule.every().tuesday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_exit_signal_refresh)
+    schedule.every().wednesday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_exit_signal_refresh)
+    schedule.every().thursday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_exit_signal_refresh)
+    schedule.every().friday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_exit_signal_refresh)
+    schedule.every().saturday.at(LOCAL_NIGHTLY_ALPHA).do(nightly_exit_signal_refresh)
 
     # End-of-day equity snapshot for the portfolio dashboard (Mon-Fri).
     schedule.every().monday.at(LOCAL_EOD_SNAPSHOT).do(daily_equity_snapshot)
