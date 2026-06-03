@@ -81,7 +81,7 @@ initialize_alpha_cache()
 
 
 # Password for the site - use environment variable for security
-SITE_PASSWORD = os.environ.get("SITE_PASSWORD", "Eb10f600!")
+SITE_PASSWORD = os.environ.get("SITE_PASSWORD")
 
 
 def login_required(f):
