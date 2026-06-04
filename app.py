@@ -12,7 +12,10 @@ from scheduler import (
     get_last_update_info,
     is_data_fresh,
     save_market_data,
+    register_scheduler,
 )
+import schedule
+import time
 
 # Alpha engine imports
 from alpha_cache import get_alpha_meta
@@ -75,9 +78,37 @@ def initialize_alpha_cache():
     threading.Thread(target=_bg, daemon=True).start()
 
 
+def initialize_scheduler():
+    """Start the background scheduler for nightly alerts, weekly scans, etc.
+
+    Runs in a background daemon thread so the Flask server doesn't block.
+    Scheduler handles:
+    - Nightly email alerts (10:30 PM EST, Mon-Sat)
+    - Weekly watchlist scans (Sunday 7 PM ET)
+    - Market data updates and exit signal refresh
+    """
+    logging.info("Starting background scheduler...")
+
+    def _scheduler_loop():
+        register_scheduler()
+        logging.info("Scheduler registered. Running event loop...")
+        while True:
+            try:
+                schedule.run_pending()
+                time.sleep(10)  # Check every 10 seconds
+            except Exception as e:
+                logging.error(f"Scheduler loop error: {e}")
+                time.sleep(30)  # Wait before retry
+
+    scheduler_thread = threading.Thread(target=_scheduler_loop, daemon=True)
+    scheduler_thread.start()
+    logging.info("Scheduler started in background thread")
+
+
 # Call initialization
 initialize_cache()
 initialize_alpha_cache()
+initialize_scheduler()
 
 
 # Password for the site - use environment variable for security
