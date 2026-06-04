@@ -99,10 +99,12 @@ def initialize_scheduler():
     logging.info("Scheduler started in background thread")
 
 
-# Call initialization
+# Call initialization BEFORE Flask routes are defined
 initialize_cache()
 initialize_alpha_cache()
-initialize_scheduler()
+
+# Scheduler will be initialized after Flask app is fully set up
+scheduler_initialized = False
 
 
 # Password for the site - use environment variable for security
@@ -612,6 +614,16 @@ def not_found(error):
 @app.errorhandler(500)
 def internal_error(error):
     return render_template("index.html"), 500
+
+
+# Initialize scheduler after Flask app is ready
+@app.before_serving
+def startup_scheduler():
+    """Start the scheduler after Flask app is fully initialized"""
+    global scheduler_initialized
+    if not scheduler_initialized:
+        initialize_scheduler()
+        scheduler_initialized = True
 
 
 if __name__ == "__main__":
