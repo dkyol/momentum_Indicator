@@ -103,8 +103,14 @@ def initialize_scheduler():
 initialize_cache()
 initialize_alpha_cache()
 
-# Scheduler will be initialized after Flask app is fully set up
-scheduler_initialized = False
+# Initialize scheduler in background thread
+# It has error handling so won't crash the app if there are issues
+try:
+    logging.info("Initializing background scheduler at startup...")
+    initialize_scheduler()
+except Exception as e:
+    logging.error(f"Failed to initialize scheduler at startup: {e}")
+    logging.warning("Scheduler will not run - alerts/scans will be manual only")
 
 
 # Password for the site - use environment variable for security
@@ -616,14 +622,6 @@ def internal_error(error):
     return render_template("index.html"), 500
 
 
-# Initialize scheduler after Flask app is ready
-@app.before_serving
-def startup_scheduler():
-    """Start the scheduler after Flask app is fully initialized"""
-    global scheduler_initialized
-    if not scheduler_initialized:
-        initialize_scheduler()
-        scheduler_initialized = True
 
 
 if __name__ == "__main__":
