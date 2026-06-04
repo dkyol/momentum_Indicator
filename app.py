@@ -12,9 +12,8 @@ from scheduler import (
     get_last_update_info,
     is_data_fresh,
     save_market_data,
-    register_scheduler,
+    run_scheduler,
 )
-import schedule
 import time
 
 # Alpha engine imports
@@ -90,15 +89,10 @@ def initialize_scheduler():
     logging.info("Starting background scheduler...")
 
     def _scheduler_loop():
-        register_scheduler()
-        logging.info("Scheduler registered. Running event loop...")
-        while True:
-            try:
-                schedule.run_pending()
-                time.sleep(10)  # Check every 10 seconds
-            except Exception as e:
-                logging.error(f"Scheduler loop error: {e}")
-                time.sleep(30)  # Wait before retry
+        try:
+            run_scheduler()  # This registers all jobs and runs the event loop
+        except Exception as e:
+            logging.error(f"Scheduler error: {e}")
 
     scheduler_thread = threading.Thread(target=_scheduler_loop, daemon=True)
     scheduler_thread.start()
